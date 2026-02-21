@@ -1,0 +1,153 @@
+/* Base Font Styles */
+.font-inter {
+    font-family: 'Inter', sans-serif;
+}
+
+.font-outfit {
+    font-family: 'Outfit', sans-serif;
+}
+
+.font-arial {
+    font-family: Arial, sans-serif;
+}
+
+.font-serif {
+    font-family: 'Playfair Display', serif;
+}
+
+/* ──── THEME: MODERN (Sidebar Layout) ──── */
+.theme-modern {
+    display: grid;
+    grid-template-columns: 32% 68%;
+}
+
+.theme-modern .resume-sidebar {
+    background-color: #f8fafc;
+    padding: 15mm 8mm;
+    border-right: 1px solid #e2e8f0;
+}
+
+.theme-modern .resume-main {
+    padding: 15mm 10mm;
+}
+
+.theme-modern .section-title {
+    font-size: 11pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4mm;
+    border-bottom: 2px solid var(--resume-primary, #6366f1);
+    color: var(--resume-primary, #6366f1);
+    padding-bottom: 1mm;
+}
+
+/* ──── THEME: MINIMAL (Classic Top-Down) ──── */
+.theme-minimal {
+    padding: 15mm 15mm;
+}
+
+.theme-minimal .resume-header {
+    text-align: center;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 5mm;
+    margin-bottom: 8mm;
+}
+
+.theme-minimal .section-title {
+    font-size: 12pt;
+    font-weight: 600;
+    color: #000;
+    margin: 6mm 0 3mm;
+    border-bottom: 1px solid #ddd;
+}
+
+/* ──── THEME: PROFESSIONAL ──── */
+.theme-professional {
+    padding: 15mm 15mm;
+}
+
+.theme-professional .resume-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 8mm;
+    border-bottom: 3px solid #333;
+    padding-bottom: 3mm;
+}
+
+.theme-professional .section-title {
+    background: #f1f5f9;
+    padding: 2mm 4mm;
+    margin: 5mm 0 3mm;
+    font-weight: 700;
+}
+
+/* Common Resume Components inside the preview */
+.resume-name {
+    font-size: 24pt;
+    font-weight: 800;
+    margin-bottom: 1mm;
+}
+
+.resume-job-title {
+    font-size: 14pt;
+    color: #64748b;
+    margin-bottom: 5mm;
+}
+
+.contact-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2mm;
+    font-size: 9pt;
+    color: #475569;
+}
+
+.contact-item {
+    display: flex;
+    align-items: center;
+    gap: 2mm;
+}
+
+.experience-item,
+.education-item,
+.project-item {
+    margin-bottom: 6mm;
+}
+
+.item-meta {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 600;
+    margin-bottom: 1mm;
+}
+
+.item-submeta {
+    display: flex;
+    justify-content: space-between;
+    color: #64748b;
+    font-size: 9pt;
+    font-style: italic;
+    margin-bottom: 2mm;
+}
+
+.item-description {
+    font-size: 10pt;
+    white-space: pre-line;
+    margin-left: 4mm;
+}
+
+.skills-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2mm;
+    margin-top: 3mm;
+}
+
+.skill-tag {
+    background: #eee;
+    padding: 1mm 3mm;
+    border-radius: 4px;
+    font-size: 9pt;
+}

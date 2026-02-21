@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Resume Architect | ATS-Optimized Resume Builder</title>
+    <meta name="description"
+        content="Create professional, ATS-friendly resumes in minutes with live preview, multiple themes, and instant PDF download.">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="themes.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar Controls -->
+        <aside class="sidebar">
+            <header class="sidebar-header">
+                <div class="logo">Architect.</div>
+                <p class="tagline">ATS-Optimized Resume Builder</p>
+            </header>
+
+            <nav class="sidebar-nav">
+                <button class="nav-item active" data-section="personal">
+                    <span class="icon">👤</span> Personal Info
+                </button>
+                <button class="nav-item" data-section="summary">
+                    <span class="icon">📝</span> Summary
+                </button>
+                <button class="nav-item" data-section="experience">
+                    <span class="icon">💼</span> Experience
+                </button>
+                <button class="nav-item" data-section="education">
+                    <span class="icon">🎓</span> Education
+                </button>
+                <button class="nav-item" data-section="skills">
+                    <span class="icon">🛠️</span> Skills
+                </button>
+                <button class="nav-item" data-section="projects">
+                    <span class="icon">🚀</span> Projects
+                </button>
+                <button class="nav-item" data-section="settings">
+                    <span class="icon">🎨</span> Themes & Layout
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <button id="download-pdf" class="btn btn-primary btn-block">
+                    <span>📥</span> Download PDF
+                </button>
+                <button id="share-resume" class="btn btn-secondary btn-block">
+                    <span>🔗</span> Share Link
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Form Area -->
+        <main class="editor-area">
+            <div id="form-personal" class="form-section active">
+                <h2>Personal Details</h2>
+                <div class="input-group">
+                    <label>Full Name</label>
+                    <input type="text" id="input-name" placeholder="John Doe" class="sync-input">
+                </div>
+                <div class="input-row">
+                    <div class="input-group">
+                        <label>Email</label>
+                        <input type="email" id="input-email" placeholder="john@example.com" class="sync-input">
+                    </div>
+                    <div class="input-group">
+                        <label>Phone</label>
+                        <input type="tel" id="input-phone" placeholder="+1 (555) 000-0000" class="sync-input">
+                    </div>
+                </div>
+                <div class="input-row">
+                    <div class="input-group">
+                        <label>Location</label>
+                        <input type="text" id="input-location" placeholder="New York, NY" class="sync-input">
+                    </div>
+                    <div class="input-group">
+                        <label>Job Title</label>
+                        <input type="text" id="input-title" placeholder="Senior Software Engineer" class="sync-input">
+                    </div>
+                </div>
+                <div class="input-row">
+                    <div class="input-group">
+                        <label>LinkedIn</label>
+                        <input type="url" id="input-linkedin" placeholder="linkedin.com/in/johndoe" class="sync-input">
+                    </div>
+                    <div class="input-group">
+                        <label>Portfolio/GitHub</label>
+                        <input type="url" id="input-github" placeholder="github.com/johndoe" class="sync-input">
+                    </div>
+                </div>
+            </div>
+
+            <div id="form-summary" class="form-section">
+                <h2>Professional Summary</h2>
+                <div class="input-group">
+                    <label>Summary Statement</label>
+                    <textarea id="input-summary" placeholder="Experienced professional with 5+ years of expertise in..."
+                        class="sync-input"></textarea>
+                </div>
+            </div>
+
+            <div id="form-experience" class="form-section">
+                <div class="section-header">
+                    <h2>Work Experience</h2>
+                    <button class="btn-add" onclick="addItem('experience')">+ Add Experience</button>
+                </div>
+                <div id="experience-list" class="dynamic-list">
+                    <!-- Dynamic Items -->
+                </div>
+            </div>
+
+            <div id="form-education" class="form-section">
+                <div class="section-header">
+                    <h2>Education</h2>
+                    <button class="btn-add" onclick="addItem('education')">+ Add Education</button>
+                </div>
+                <div id="education-list" class="dynamic-list">
+                    <!-- Dynamic Items -->
+                </div>
+            </div>
+
+            <div id="form-skills" class="form-section">
+                <h2>Skills</h2>
+                <div class="input-group">
+                    <label>Keywords (comma separated)</label>
+                    <textarea id="input-skills" placeholder="JavaScript, React, Node.js, AWS, Python..."
+                        class="sync-input"></textarea>
+                    <p class="input-hint">Tip: Use relevant keywords from job descriptions for ATS optimization.</p>
+                </div>
+            </div>
+
+            <div id="form-projects" class="form-section">
+                <div class="section-header">
+                    <h2>Key Projects</h2>
+                    <button class="btn-add" onclick="addItem('projects')">+ Add Project</button>
+                </div>
+                <div id="projects-list" class="dynamic-list">
+                    <!-- Dynamic Items -->
+                </div>
+            </div>
+
+            <div id="form-settings" class="form-section">
+                <h2>Theme & Layout</h2>
+                <div class="theme-grid">
+                    <button class="theme-card active" data-theme="theme-modern">
+                        <div class="theme-preview modern"></div>
+                        <span>Modern Sidebar</span>
+                    </button>
+                    <button class="theme-card" data-theme="theme-minimal">
+                        <div class="theme-preview minimal"></div>
+                        <span>Minimalist</span>
+                    </button>
+                    <button class="theme-card" data-theme="theme-professional">
+                        <div class="theme-preview professional"></div>
+                        <span>Classic Prof.</span>
+                    </button>
+                    <button class="theme-card" data-theme="theme-creative">
+                        <div class="theme-preview creative"></div>
+                        <span>Creative Split</span>
+                    </button>
+                </div>
+
+                <div class="setting-group" style="margin-top: 2rem;">
+                    <h3>Typography</h3>
+                    <select id="setting-font" class="sync-input">
+                        <option value="font-inter">Inter (Modern)</option>
+                        <option value="font-outfit">Outfit (Stylish)</option>
+                        <option value="font-arial">Arial (Safe ATS)</option>
+                        <option value="font-serif">Playfair Display (Serif)</option>
+                    </select>
+                </div>
+
+                <div class="setting-group">
+                    <h3>Primary Color</h3>
+                    <div class="color-picker">
+                        <input type="color" id="setting-color" value="#6366f1">
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Live Preview Area -->
+        <section class="preview-area">
+            <div class="preview-toolbar">
+                <div class="preview-zoom">
+                    <span>Live Preview</span>
+                </div>
+                <div class="preview-actions">
+                    <button id="toggle-preview-mode" title="Toggle Desktop/Mobile Preview">📱</button>
+                </div>
+            </div>
+
+            <div id="resume-preview-container" class="preview-canvas-wrapper">
+                <div id="resume-preview" class="resume-paper theme-modern font-inter">
+                    <!-- The actual resume content will be rendered here by JS -->
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Template for Dynamic Items -->
+    <template id="tmpl-experience">
+        <div class="list-item" data-id="{{id}}">
+            <div class="item-header">
+                <h3>New Role</h3>
+                <button class="btn-remove" onclick="removeItem(this)">×</button>
+            </div>
+            <div class="input-row">
+                <div class="input-group">
+                    <label>Company</label>
+                    <input type="text" class="item-company" placeholder="e.g. Google" oninput="updatePreview()">
+                </div>
+                <div class="input-group">
+                    <label>Position</label>
+                    <input type="text" class="item-position" placeholder="e.g. Senior Developer"
+                        oninput="updatePreview()">
+                </div>
+            </div>
+            <div class="input-row">
+                <div class="input-group">
+                    <label>Duration</label>
+                    <input type="text" class="item-duration" placeholder="e.g. 2020 - Present"
+                        oninput="updatePreview()">
+                </div>
+                <div class="input-group">
+                    <label>Location</label>
+                    <input type="text" class="item-city" placeholder="e.g. Remote" oninput="updatePreview()">
+                </div>
+            </div>
+            <div class="input-group">
+                <label>Description (Bullet points)</label>
+                <textarea class="item-desc" placeholder="Managed a team of 10..." oninput="updatePreview()"></textarea>
+            </div>
+        </div>
+    </template>
+
+    <template id="tmpl-education">
+        <div class="list-item" data-id="{{id}}">
+            <div class="item-header">
+                <h3>New Education</h3>
+                <button class="btn-remove" onclick="removeItem(this)">×</button>
+            </div>
+            <div class="input-row">
+                <div class="input-group">
+                    <label>Institution</label>
+                    <input type="text" class="item-school" placeholder="e.g. Stanford University"
+                        oninput="updatePreview()">
+                </div>
+                <div class="input-group">
+                    <label>Degree</label>
+                    <input type="text" class="item-degree" placeholder="e.g. BS Computer Science"
+                        oninput="updatePreview()">
+                </div>
+            </div>
+            <div class="input-row">
+                <div class="input-group">
+                    <label>Graduation Year</label>
+                    <input type="text" class="item-year" placeholder="e.g. 2022" oninput="updatePreview()">
+                </div>
+                <div class="input-group">
+                    <label>GPA / Honours</label>
+                    <input type="text" class="item-score" placeholder="e.g. 3.9/4.0" oninput="updatePreview()">
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="tmpl-projects">
+        <div class="list-item" data-id="{{id}}">
+            <div class="item-header">
+                <h3>New Project</h3>
+                <button class="btn-remove" onclick="removeItem(this)">×</button>
+            </div>
+            <div class="input-row">
+                <div class="input-group">
+                    <label>Project Name</label>
+                    <input type="text" class="item-project-name" placeholder="e.g. AI SaaS Platform"
+                        oninput="updatePreview()">
+                </div>
+                <div class="input-group">
+                    <label>Link (Optional)</label>
+                    <input type="text" class="item-project-link" placeholder="e.g. github.com/..."
+                        oninput="updatePreview()">
+                </div>
+            </div>
+            <div class="input-group">
+                <label>Key Achievements</label>
+                <textarea class="item-project-desc" placeholder="Developed using React and Node.js..."
+                    oninput="updatePreview()"></textarea>
+            </div>
+        </div>
+    </template>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
