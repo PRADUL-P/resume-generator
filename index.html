@@ -3,56 +3,86 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <title>AI Resume Architect | ATS-Optimized Resume Builder</title>
-    <meta name="description"
-        content="Create professional, ATS-friendly resumes in minutes with live preview, multiple themes, and instant PDF download.">
-    <link
-        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap"
-        rel="stylesheet">
+    <meta name="description" content="Create professional, ATS-friendly resumes with AI assistance, multiple templates, photo upload, LinkedIn autofill, and multi-format export.">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&family=Lato:wght@400;700&family=Merriweather:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="themes.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 
 <body>
-    <div class="app-container">
+    <!-- Mobile Top Bar -->
+    <div class="mobile-topbar">
+        <div class="logo">Architect.</div>
+        <div class="mobile-topbar-actions">
+            <button id="mobile-menu-toggle" aria-label="Toggle Menu">☰</button>
+            <button id="mobile-preview-toggle" aria-label="Toggle Preview">👁</button>
+        </div>
+    </div>
+
+    <div class="app-container" id="app-container">
         <!-- Sidebar Controls -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
             <header class="sidebar-header">
                 <div class="logo">Architect.</div>
                 <p class="tagline">ATS-Optimized Resume Builder</p>
             </header>
 
-            <nav class="sidebar-nav">
-                <button class="nav-item active" data-section="personal">
-                    <span class="icon">👤</span> Personal Info
-                </button>
-                <button class="nav-item" data-section="summary">
-                    <span class="icon">📝</span> Summary
-                </button>
-                <button class="nav-item" data-section="experience">
-                    <span class="icon">💼</span> Experience
-                </button>
-                <button class="nav-item" data-section="education">
-                    <span class="icon">🎓</span> Education
-                </button>
-                <button class="nav-item" data-section="skills">
-                    <span class="icon">🛠️</span> Skills
-                </button>
-                <button class="nav-item" data-section="projects">
-                    <span class="icon">🚀</span> Projects
-                </button>
-                <button class="nav-item" data-section="settings">
-                    <span class="icon">🎨</span> Themes & Layout
-                </button>
-            </nav>
+                <nav class="sidebar-nav" id="sidebar-nav">
+                    <button class="nav-item active" data-section="personal" id="nav-personal">
+                        <span class="icon">👤</span><span class="nav-label">Personal Info</span>
+                    </button>
+                    <button class="nav-item" data-section="summary" id="nav-summary">
+                        <span class="icon">📝</span><span class="nav-label">Summary</span>
+                    </button>
+                    <button class="nav-item" data-section="experience" id="nav-experience">
+                        <span class="icon">💼</span><span class="nav-label">Experience</span>
+                    </button>
+                    <button class="nav-item" data-section="education" id="nav-education">
+                        <span class="icon">🎓</span><span class="nav-label">Education</span>
+                    </button>
+                    <button class="nav-item" data-section="skills" id="nav-skills">
+                        <span class="icon">🛠️</span><span class="nav-label">Skills</span>
+                    </button>
+                    <button class="nav-item" data-section="projects" id="nav-projects">
+                        <span class="icon">🚀</span><span class="nav-label">Projects</span>
+                    </button>
+                    <div id="dynamic-nav-sections"></div>
+                    <button class="nav-item" data-section="custom" id="nav-custom">
+                        <span class="icon">✨</span><span class="nav-label">Add Custom Tab</span>
+                    </button>
+                    <button class="nav-item" data-section="profiles" id="nav-profiles">
+                        <span class="icon">💾</span><span class="nav-label">My Profiles</span>
+                    </button>
+                    <button class="nav-item" data-section="settings" id="nav-settings">
+                        <span class="icon">🎨</span><span class="nav-label">Themes & Style</span>
+                    </button>
+                </nav>
 
             <div class="sidebar-footer">
-                <button id="download-pdf" class="btn btn-primary btn-block">
-                    <span>📥</span> Download PDF
+                <button id="upload-resume-btn" class="btn btn-secondary btn-block">
+                    <span>📂</span> Upload JSON / PDF
                 </button>
+                <input type="file" id="upload-resume-input" accept=".json,.pdf" style="display:none">
+
+                <div class="dropdown-wrapper">
+                    <button id="download-trigger" class="btn btn-primary btn-block">
+                        <span>📥</span> Download As…
+                    </button>
+                    <div class="dropdown-menu" id="download-menu">
+                        <button onclick="exportPDF()">📄 PDF</button>
+                        <button onclick="exportHTML()">🌐 HTML</button>
+                        <button onclick="exportJSON()">📦 JSON</button>
+                        <button onclick="exportCSV()">📊 CSV</button>
+                        <button onclick="exportWord()">📝 Word (.doc)</button>
+                    </div>
+                </div>
+
                 <button id="share-resume" class="btn btn-secondary btn-block">
                     <span>🔗</span> Share Link
                 </button>
@@ -60,9 +90,36 @@
         </aside>
 
         <!-- Main Form Area -->
-        <main class="editor-area">
+        <main class="editor-area" id="editor-area">
+
+            <!-- ── PERSONAL INFO ── -->
             <div id="form-personal" class="form-section active">
                 <h2>Personal Details</h2>
+
+                <!-- Photo Upload -->
+                <div class="photo-upload-container">
+                    <div class="photo-preview" id="photo-preview">
+                        <span>📷</span>
+                        <small>Click to upload photo</small>
+                    </div>
+                    <input type="file" id="photo-input" accept="image/*" style="display:none">
+                    <div class="photo-actions">
+                        <button class="btn-add" onclick="document.getElementById('photo-input').click()">Upload Photo</button>
+                        <button class="btn-remove-photo" id="remove-photo-btn" style="display:none" onclick="removePhoto()">Remove</button>
+                    </div>
+                </div>
+
+                <!-- LinkedIn Autofill -->
+                <!-- LinkedIn & Text Import -->
+                <div class="linkedin-autofill-bar">
+                    <span class="linkedin-icon">in</span>
+                    <label style="color:#0a66c2; font-weight:700; margin-bottom:0.25rem; display:block">Import from LinkedIn / PDF Text</label>
+                    <p class="input-hint" style="margin-bottom:0.5rem">For best results: Open profile -> Ctrl+A (Select All) -> Ctrl+C -> Paste here.</p>
+                    <textarea id="import-text-input" placeholder="Paste LinkedIn profile text or copied PDF text here..." rows="3" style="margin-bottom:0.5rem"></textarea>
+                    <button id="linkedin-autofill-btn" class="btn btn-primary" style="padding: 0.4rem 1rem; width:100%">✨ AI Parse & Import</button>
+                </div>
+                <div id="linkedin-status" class="linkedin-status"></div>
+
                 <div class="input-group">
                     <label>Full Name</label>
                     <input type="text" id="input-name" placeholder="John Doe" class="sync-input">
@@ -89,65 +146,131 @@
                 </div>
                 <div class="input-row">
                     <div class="input-group">
-                        <label>LinkedIn</label>
+                        <label>LinkedIn URL</label>
                         <input type="url" id="input-linkedin" placeholder="linkedin.com/in/johndoe" class="sync-input">
                     </div>
                     <div class="input-group">
-                        <label>Portfolio/GitHub</label>
+                        <label>GitHub</label>
                         <input type="url" id="input-github" placeholder="github.com/johndoe" class="sync-input">
                     </div>
                 </div>
+                <div class="input-row">
+                    <div class="input-group">
+                        <label>Website</label>
+                        <input type="url" id="input-website" placeholder="yoursite.com" class="sync-input">
+                    </div>
+                    <div class="input-group">
+                        <label>Twitter / X</label>
+                        <input type="text" id="input-twitter" placeholder="@handle" class="sync-input">
+                    </div>
+                </div>
+
+                <!-- Icon Set -->
+                <div class="input-group">
+                    <label>Contact Icon Style</label>
+                    <div class="icon-set-picker">
+                        <button class="icon-set-btn active" data-iconset="emoji" onclick="setIconSet('emoji',this)">Emoji 📧📱</button>
+                        <button class="icon-set-btn" data-iconset="text" onclick="setIconSet('text',this)">Plain Text</button>
+                        <button class="icon-set-btn" data-iconset="minimal" onclick="setIconSet('minimal',this)">Minimal •</button>
+                    </div>
+                </div>
+                <button class="btn btn-secondary" style="margin-top:2rem; width:100%; border: 1px dashed var(--border)" onclick="document.getElementById('nav-custom').click()">✨ Need to add custom fields? Add a Custom Tab here</button>
             </div>
 
+            <!-- ── SUMMARY ── -->
             <div id="form-summary" class="form-section">
                 <h2>Professional Summary</h2>
+                <div class="ai-assist-bar">
+                    <span class="ai-badge">✨ AI</span>
+                    <input type="text" id="ai-job-title-input" placeholder="e.g. Software Engineer at Google…">
+                    <button id="ai-generate-btn" class="btn-add" onclick="aiGenerateSummary()">Generate</button>
+                </div>
+                <div id="ai-suggestions" class="ai-suggestions"></div>
                 <div class="input-group">
                     <label>Summary Statement</label>
-                    <textarea id="input-summary" placeholder="Experienced professional with 5+ years of expertise in..."
-                        class="sync-input"></textarea>
+                    <textarea id="input-summary" placeholder="Experienced professional with 5+ years of expertise in…" class="sync-input" rows="6"></textarea>
                 </div>
+                <div class="input-hint">Tip: Use the AI assistant above to generate a tailored summary for your target role.</div>
+                <button class="btn btn-secondary" style="margin-top:2rem; width:100%; border: 1px dashed var(--border)" onclick="document.getElementById('nav-custom').click()">✨ Need to add custom fields? Add a Custom Tab here</button>
             </div>
 
+            <!-- ── EXPERIENCE ── -->
             <div id="form-experience" class="form-section">
                 <div class="section-header">
                     <h2>Work Experience</h2>
                     <button class="btn-add" onclick="addItem('experience')">+ Add Experience</button>
                 </div>
-                <div id="experience-list" class="dynamic-list">
-                    <!-- Dynamic Items -->
-                </div>
+                <div id="experience-list" class="dynamic-list"></div>
+                <button class="btn btn-secondary" style="margin-top:2rem; width:100%; border: 1px dashed var(--border)" onclick="document.getElementById('nav-custom').click()">✨ Need to add custom experience/data? Add a Custom Tab here</button>
             </div>
 
+            <!-- ── EDUCATION ── -->
             <div id="form-education" class="form-section">
                 <div class="section-header">
                     <h2>Education</h2>
                     <button class="btn-add" onclick="addItem('education')">+ Add Education</button>
                 </div>
-                <div id="education-list" class="dynamic-list">
-                    <!-- Dynamic Items -->
-                </div>
+                <div id="education-list" class="dynamic-list"></div>
+                <button class="btn btn-secondary" style="margin-top:2rem; width:100%; border: 1px dashed var(--border)" onclick="document.getElementById('nav-custom').click()">✨ Need to add custom education/data? Add a Custom Tab here</button>
             </div>
 
+            <!-- ── SKILLS ── -->
             <div id="form-skills" class="form-section">
                 <h2>Skills</h2>
-                <div class="input-group">
+                <div class="ai-assist-bar">
+                    <span class="ai-badge">✨ AI</span>
+                    <input type="text" id="ai-skills-input" placeholder="e.g. Frontend Developer, React, 3 years…">
+                    <button class="btn-add" onclick="aiSuggestSkills()">Suggest</button>
+                </div>
+                <div id="ai-skill-chips" class="ai-skill-chips"></div>
+                <div class="input-group" style="margin-top:1rem">
                     <label>Keywords (comma separated)</label>
-                    <textarea id="input-skills" placeholder="JavaScript, React, Node.js, AWS, Python..."
-                        class="sync-input"></textarea>
+                    <textarea id="input-skills" placeholder="JavaScript, React, Node.js, AWS, Python…" class="sync-input" rows="4"></textarea>
                     <p class="input-hint">Tip: Use relevant keywords from job descriptions for ATS optimization.</p>
                 </div>
+                <button class="btn btn-secondary" style="margin-top:2rem; width:100%; border: 1px dashed var(--border)" onclick="document.getElementById('nav-custom').click()">✨ Need to add custom data? Add a Custom Tab here</button>
             </div>
 
+            <!-- ── PROJECTS ── -->
             <div id="form-projects" class="form-section">
                 <div class="section-header">
                     <h2>Key Projects</h2>
                     <button class="btn-add" onclick="addItem('projects')">+ Add Project</button>
                 </div>
-                <div id="projects-list" class="dynamic-list">
-                    <!-- Dynamic Items -->
+                <div id="projects-list" class="dynamic-list"></div>
+                <button class="btn btn-secondary" style="margin-top:2rem; width:100%; border: 1px dashed var(--border)" onclick="document.getElementById('nav-custom').click()">✨ Need to add custom project data? Add a Custom Tab here</button>
+            </div>
+
+            <!-- ── PROFILES ── -->
+            <div id="form-profiles" class="form-section">
+                <div class="section-header">
+                    <h2>My Saved Profiles</h2>
+                    <button class="btn btn-primary" onclick="saveCurrentProfile()">+ Save New Profile</button>
+                </div>
+                <p class="input-hint">Profiles are saved locally in your browser. You can switch between different resumes here.</p>
+                <div id="profiles-list" class="dynamic-list" style="margin-top:1.5rem">
+                    <!-- Progressively loaded from localStorage -->
+                </div>
+            </div>
+            <div id="form-custom" class="form-section">
+                <div class="section-header">
+                    <h2>Add Custom Section</h2>
+                </div>
+                <p class="input-hint" style="margin-bottom:1.5rem">Create custom tabs like Certifications, Languages, volunteering, etc. Each will generate its own dedicated tab in the sidebar so you can manage the data separately.</p>
+                
+                <div style="display:flex; gap:1rem; margin-bottom: 2rem;">
+                    <button class="btn btn-secondary" style="flex:1; padding: 1.5rem; text-align:center" onclick="addCustomSection('left')">
+                        <span style="font-size:1.5rem; display:block; margin-bottom:0.5rem">+ ⬅️</span>
+                        Add Left (Sidebar) Section
+                    </button>
+                    <button class="btn btn-secondary" style="flex:1; padding: 1.5rem; text-align:center" onclick="addCustomSection('right')">
+                        <span style="font-size:1.5rem; display:block; margin-bottom:0.5rem">+ ➡️</span>
+                        Add Right (Main) Section
+                    </button>
                 </div>
             </div>
 
+            <!-- ── THEMES & STYLE ── -->
             <div id="form-settings" class="form-section">
                 <h2>Theme & Layout</h2>
                 <div class="theme-grid">
@@ -167,52 +290,183 @@
                         <div class="theme-preview creative"></div>
                         <span>Creative Split</span>
                     </button>
+                    <button class="theme-card" data-theme="theme-executive">
+                        <div class="theme-preview executive"></div>
+                        <span>Executive</span>
+                    </button>
+                    <button class="theme-card" data-theme="theme-techno">
+                        <div class="theme-preview techno"></div>
+                        <span>Tech Bold</span>
+                    </button>
+                    <button class="theme-card" data-theme="theme-elegant">
+                        <div class="theme-preview elegant"></div>
+                        <span>Elegant Serif</span>
+                    </button>
+                    <button class="theme-card" data-theme="theme-compact">
+                        <div class="theme-preview compact"></div>
+                        <span>Compact Dense</span>
+                    </button>
                 </div>
 
                 <div class="setting-group" style="margin-top: 2rem;">
-                    <h3>Typography</h3>
-                    <select id="setting-font" class="sync-input">
-                        <option value="font-inter">Inter (Modern)</option>
-                        <option value="font-outfit">Outfit (Stylish)</option>
-                        <option value="font-arial">Arial (Safe ATS)</option>
-                        <option value="font-serif">Playfair Display (Serif)</option>
-                    </select>
+                    <h3>Layout Options</h3>
+                    <div class="input-group" style="display:flex; justify-content:space-between; align-items:center;">
+                        <label style="margin-bottom:0">Sidebar Position</label>
+                        <div class="icon-set-picker">
+                            <button id="side-left" class="icon-set-btn active" onclick="setSidebarSide('left')">Left</button>
+                            <button id="side-right" class="icon-set-btn" onclick="setSidebarSide('right')">Right</button>
+                        </div>
+                    </div>
+                    <div class="input-group" style="margin-top:1rem">
+                        <label>Page Size</label>
+                        <select id="setting-page-size" class="sync-input" onchange="setPageSize(this.value)">
+                            <option value="a4" selected>A4 (210 x 297mm)</option>
+                            <option value="letter">US Letter (216 x 279mm)</option>
+                            <option value="legal">Legal (216 x 356mm)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <h3>Typography (Font Family)</h3>
+                    <div class="input-group">
+                        <label>Heading Font</label>
+                        <select id="setting-heading-font" class="sync-input">
+                            <option value="font-inter">Inter (Modern)</option>
+                            <option value="font-outfit">Outfit (Stylish)</option>
+                            <option value="font-arial">Arial (Safe ATS)</option>
+                            <option value="font-serif">Playfair Display (Serif)</option>
+                            <option value="font-lato">Lato (Clean)</option>
+                            <option value="font-merriweather">Merriweather (Traditional)</option>
+                        </select>
+                    </div>
+                    <div class="input-group" style="margin-top:0.5rem">
+                        <label>Body Font</label>
+                        <select id="setting-font" class="sync-input">
+                            <option value="font-inter">Inter (Modern)</option>
+                            <option value="font-outfit">Outfit (Stylish)</option>
+                            <option value="font-arial">Arial (Safe ATS)</option>
+                            <option value="font-serif">Playfair Display (Serif)</option>
+                            <option value="font-lato">Lato (Clean)</option>
+                            <option value="font-merriweather">Merriweather (Traditional)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <h3>Font Sizes</h3>
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label>Headings</label>
+                            <div class="font-size-control">
+                                <button class="fs-btn" onclick="changeHeadingSize(-1)">A−</button>
+                                <span id="heading-size-display">16pt</span>
+                                <button class="fs-btn" onclick="changeHeadingSize(1)">A+</button>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label>Content</label>
+                            <div class="font-size-control">
+                                <button class="fs-btn" onclick="changeFontSize(-1)">A−</button>
+                                <span id="font-size-display">10pt</span>
+                                <button class="fs-btn" onclick="changeFontSize(1)">A+</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="setting-group">
                     <h3>Primary Color</h3>
-                    <div class="color-picker">
+                    <div class="color-picker-row">
                         <input type="color" id="setting-color" value="#6366f1">
+                        <div class="color-presets">
+                            <div class="color-preset" style="background:#6366f1" onclick="setColor('#6366f1')" title="Indigo"></div>
+                            <div class="color-preset" style="background:#0ea5e9" onclick="setColor('#0ea5e9')" title="Sky Blue"></div>
+                            <div class="color-preset" style="background:#10b981" onclick="setColor('#10b981')" title="Emerald"></div>
+                            <div class="color-preset" style="background:#f59e0b" onclick="setColor('#f59e0b')" title="Amber"></div>
+                            <div class="color-preset" style="background:#ef4444" onclick="setColor('#ef4444')" title="Red"></div>
+                            <div class="color-preset" style="background:#8b5cf6" onclick="setColor('#8b5cf6')" title="Violet"></div>
+                            <div class="color-preset" style="background:#ec4899" onclick="setColor('#ec4899')" title="Pink"></div>
+                            <div class="color-preset" style="background:#111827" onclick="setColor('#111827')" title="Charcoal"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <h3>Text Color</h3>
+                    <div class="color-picker-row">
+                        <input type="color" id="setting-text-color" value="#111827">
+                        <div class="color-presets">
+                            <div class="color-preset" style="background:#111827" onclick="setTextColor('#111827')"></div>
+                            <div class="color-preset" style="background:#1e3a5f" onclick="setTextColor('#1e3a5f')"></div>
+                            <div class="color-preset" style="background:#374151" onclick="setTextColor('#374151')"></div>
+                            <div class="color-preset" style="background:#1a1a2e" onclick="setTextColor('#1a1a2e')"></div>
+                        </div>
                     </div>
                 </div>
             </div>
         </main>
 
         <!-- Live Preview Area -->
-        <section class="preview-area">
+        <section class="preview-area" id="preview-area">
             <div class="preview-toolbar">
                 <div class="preview-zoom">
                     <span>Live Preview</span>
                 </div>
                 <div class="preview-actions">
+                    <button id="zoom-out-btn" title="Zoom Out">🔍−</button>
+                    <span id="zoom-level">100%</span>
+                    <button id="zoom-in-btn" title="Zoom In">🔍+</button>
                     <button id="toggle-preview-mode" title="Toggle Desktop/Mobile Preview">📱</button>
                 </div>
             </div>
 
             <div id="resume-preview-container" class="preview-canvas-wrapper">
                 <div id="resume-preview" class="resume-paper theme-modern font-inter">
-                    <!-- The actual resume content will be rendered here by JS -->
+                    <!-- Rendered by JS -->
                 </div>
             </div>
         </section>
     </div>
 
-    <!-- Template for Dynamic Items -->
+    <!-- AI Assistant Modal -->
+    <div id="ai-modal" class="modal-overlay" style="display:none">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>✨ AI Writing Assistant</h3>
+                <button class="modal-close" onclick="closeAIModal()">×</button>
+            </div>
+            <div class="modal-body" id="ai-modal-body">
+                <p>Generating your content…</p>
+                <div class="ai-loader"><div></div><div></div><div></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LinkedIn Compare Modal -->
+    <div id="linkedin-modal" class="modal-overlay" style="display:none">
+        <div class="modal-box modal-wide">
+            <div class="modal-header">
+                <h3>🔗 LinkedIn Data Comparison</h3>
+                <button class="modal-close" onclick="closeLinkedInModal()">×</button>
+            </div>
+            <div class="modal-body" id="linkedin-modal-body"></div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="applyLinkedInData()">✓ Apply All</button>
+                <button class="btn btn-secondary" onclick="closeLinkedInModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Templates -->
     <template id="tmpl-experience">
         <div class="list-item" data-id="{{id}}">
             <div class="item-header">
                 <h3>New Role</h3>
-                <button class="btn-remove" onclick="removeItem(this)">×</button>
+                <div class="item-header-actions">
+                    <button class="ai-item-btn" onclick="aiEnhanceExperience(this)" title="AI Enhance">✨</button>
+                    <button class="btn-remove" onclick="removeItem(this)">×</button>
+                </div>
             </div>
             <div class="input-row">
                 <div class="input-group">
@@ -221,15 +475,13 @@
                 </div>
                 <div class="input-group">
                     <label>Position</label>
-                    <input type="text" class="item-position" placeholder="e.g. Senior Developer"
-                        oninput="updatePreview()">
+                    <input type="text" class="item-position" placeholder="e.g. Senior Developer" oninput="updatePreview()">
                 </div>
             </div>
             <div class="input-row">
                 <div class="input-group">
                     <label>Duration</label>
-                    <input type="text" class="item-duration" placeholder="e.g. 2020 - Present"
-                        oninput="updatePreview()">
+                    <input type="text" class="item-duration" placeholder="e.g. 2020 – Present" oninput="updatePreview()">
                 </div>
                 <div class="input-group">
                     <label>Location</label>
@@ -237,8 +489,9 @@
                 </div>
             </div>
             <div class="input-group">
-                <label>Description (Bullet points)</label>
-                <textarea class="item-desc" placeholder="Managed a team of 10..." oninput="updatePreview()"></textarea>
+                <label>Description (one bullet per line)</label>
+                <textarea class="item-desc" placeholder="Led a team of 10 engineers…&#10;Improved performance by 40%…" oninput="updatePreview()" rows="4"></textarea>
+                <button class="btn-add" style="font-size:0.75rem; padding:0.2rem 0.5rem; margin-top:0.4rem; width:max-content" onclick="insertBullet(this)">+ Add Bullet Point</button>
             </div>
         </div>
     </template>
@@ -252,13 +505,11 @@
             <div class="input-row">
                 <div class="input-group">
                     <label>Institution</label>
-                    <input type="text" class="item-school" placeholder="e.g. Stanford University"
-                        oninput="updatePreview()">
+                    <input type="text" class="item-school" placeholder="e.g. Stanford University" oninput="updatePreview()">
                 </div>
                 <div class="input-group">
                     <label>Degree</label>
-                    <input type="text" class="item-degree" placeholder="e.g. BS Computer Science"
-                        oninput="updatePreview()">
+                    <input type="text" class="item-degree" placeholder="e.g. BS Computer Science" oninput="updatePreview()">
                 </div>
             </div>
             <div class="input-row">
@@ -271,6 +522,11 @@
                     <input type="text" class="item-score" placeholder="e.g. 3.9/4.0" oninput="updatePreview()">
                 </div>
             </div>
+            <div class="input-group">
+                <label>Description (one bullet per line)</label>
+                <textarea class="item-desc" placeholder="Extracurriculars, honors, thesis…" oninput="updatePreview()" rows="3"></textarea>
+                <button class="btn-add" style="font-size:0.75rem; padding:0.2rem 0.5rem; margin-top:0.4rem; width:max-content" onclick="insertBullet(this)">+ Add Bullet Point</button>
+            </div>
         </div>
     </template>
 
@@ -278,24 +534,29 @@
         <div class="list-item" data-id="{{id}}">
             <div class="item-header">
                 <h3>New Project</h3>
-                <button class="btn-remove" onclick="removeItem(this)">×</button>
+                <div class="item-header-actions">
+                    <button class="ai-item-btn" onclick="aiEnhanceProject(this)" title="AI Enhance">✨</button>
+                    <button class="btn-remove" onclick="removeItem(this)">×</button>
+                </div>
             </div>
             <div class="input-row">
                 <div class="input-group">
                     <label>Project Name</label>
-                    <input type="text" class="item-project-name" placeholder="e.g. AI SaaS Platform"
-                        oninput="updatePreview()">
+                    <input type="text" class="item-project-name" placeholder="e.g. AI SaaS Platform" oninput="updatePreview()">
                 </div>
                 <div class="input-group">
                     <label>Link (Optional)</label>
-                    <input type="text" class="item-project-link" placeholder="e.g. github.com/..."
-                        oninput="updatePreview()">
+                    <input type="text" class="item-project-link" placeholder="e.g. github.com/…" oninput="updatePreview()">
                 </div>
             </div>
             <div class="input-group">
+                <label>Tech Stack / Tags</label>
+                <input type="text" class="item-project-tech" placeholder="e.g. React, Node.js, AWS" oninput="updatePreview()">
+            </div>
+            <div class="input-group">
                 <label>Key Achievements</label>
-                <textarea class="item-project-desc" placeholder="Developed using React and Node.js..."
-                    oninput="updatePreview()"></textarea>
+                <textarea class="item-project-desc" placeholder="Developed using React and Node.js…" oninput="updatePreview()" rows="3"></textarea>
+                <button class="btn-add" style="font-size:0.75rem; padding:0.2rem 0.5rem; margin-top:0.4rem; width:max-content" onclick="insertBullet(this)">+ Add Bullet Point</button>
             </div>
         </div>
     </template>
