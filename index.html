@@ -31,6 +31,9 @@
             <header class="sidebar-header">
                 <div class="logo">Architect.</div>
                 <p class="tagline">ATS-Optimized Resume Builder</p>
+                <div id="active-profile-indicator" style="margin-top:0.75rem; font-size:0.75rem; color:var(--primary); font-weight:600; display:none">
+                    Editing: <span id="current-profile-name">None</span>
+                </div>
             </header>
 
                 <nav class="sidebar-nav" id="sidebar-nav">
@@ -65,6 +68,10 @@
                 </nav>
 
             <div class="sidebar-footer">
+                <button id="sidebar-update-btn" class="btn btn-primary btn-block" style="display:none; background:#10b981; margin-bottom:0.5rem" onclick="updateActiveProfile()">
+                    <span>💾</span> Save to Current Profile
+                </button>
+
                 <button id="upload-resume-btn" class="btn btn-secondary btn-block">
                     <span>📂</span> Upload JSON / PDF
                 </button>
@@ -245,7 +252,10 @@
             <div id="form-profiles" class="form-section">
                 <div class="section-header">
                     <h2>My Saved Profiles</h2>
-                    <button class="btn btn-primary" onclick="saveCurrentProfile()">+ Save New Profile</button>
+                    <div style="display:flex; gap:0.5rem">
+                         <button class="btn btn-secondary" onclick="updateActiveProfile()">💾 Update Active</button>
+                         <button class="btn btn-primary" onclick="saveCurrentProfile()">+ Save New Profile</button>
+                    </div>
                 </div>
                 <p class="input-hint">Profiles are saved locally in your browser. You can switch between different resumes here.</p>
                 <div id="profiles-list" class="dynamic-list" style="margin-top:1.5rem">
@@ -414,6 +424,9 @@
                     <span>Live Preview</span>
                 </div>
                 <div class="preview-actions">
+                    <button id="undo-btn" title="Undo (Ctrl+Z)" onclick="undo()">⟲</button>
+                    <button id="redo-btn" title="Redo (Ctrl+Y)" onclick="redo()">⟳</button>
+                    <div style="width: 1px; height: 16px; background: var(--border); margin: 0 4px;"></div>
                     <button id="zoom-out-btn" title="Zoom Out">🔍−</button>
                     <span id="zoom-level">100%</span>
                     <button id="zoom-in-btn" title="Zoom In">🔍+</button>
@@ -443,16 +456,20 @@
         </div>
     </div>
 
-    <!-- LinkedIn Compare Modal -->
     <div id="linkedin-modal" class="modal-overlay" style="display:none">
         <div class="modal-box modal-wide">
             <div class="modal-header">
-                <h3>🔗 LinkedIn Data Comparison</h3>
-                <button class="modal-close" onclick="closeLinkedInModal()">×</button>
+                <h3>📂 PDF / LinkedIn Data Import</h3>
+                <div style="display:flex; gap:0.5rem; align-items:center">
+                    <button class="btn btn-secondary" style="padding:0.3rem 0.7rem; font-size:0.75rem" onclick="toggleAllCompareChecks(true)">Select All</button>
+                    <button class="btn btn-secondary" style="padding:0.3rem 0.7rem; font-size:0.75rem" onclick="toggleAllCompareChecks(false)">Deselect All</button>
+                    <button class="modal-close" onclick="closeLinkedInModal()">×</button>
+                </div>
             </div>
             <div class="modal-body" id="linkedin-modal-body"></div>
             <div class="modal-footer">
-                <button class="btn btn-primary" onclick="applyLinkedInData()">✓ Apply All</button>
+                <span style="font-size:0.8rem; color:var(--text-dim); margin-right:auto">✏️ Edit extracted text directly. ☑️ Uncheck to skip a field.</span>
+                <button class="btn btn-primary" onclick="applyLinkedInData()">✓ Apply Selected</button>
                 <button class="btn btn-secondary" onclick="closeLinkedInModal()">Cancel</button>
             </div>
         </div>

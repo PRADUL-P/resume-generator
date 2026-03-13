@@ -1,4 +1,4 @@
-// ═══════════════════════════════════════════════════════
+﻿// ═══════════════════════════════════════════════════════
 //  STATE
 // ═══════════════════════════════════════════════════════
 let resumeData = {
@@ -16,6 +16,64 @@ let resumeData = {
 
 let zoomLevel = 100;
 let linkedInPending = {};
+if (typeof pdfjsLib !== 'undefined') {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+let activeProfileId = null;
+
+// History Management
+let history = [];
+let historyIndex = -1;
+let isApplyingHistory = false;
+const MAX_HISTORY = 50;
+
+function pushToHistory() {
+    if (isApplyingHistory) return;
+    
+    const snapshot = JSON.stringify({
+        ...resumeData,
+        experience: getDynamicItems('experience'),
+        education:  getDynamicItems('education'),
+        projects:   getDynamicItems('projects'),
+        customSections: getCustomSections()
+    });
+
+    // Only push if different from last
+    if (historyIndex >= 0 && history[historyIndex] === snapshot) return;
+
+    // Remove future states if we are in the middle of history
+    if (historyIndex < history.length - 1) {
+        history = history.slice(0, historyIndex + 1);
+    }
+
+    history.push(snapshot);
+    if (history.length > MAX_HISTORY) history.shift();
+    else historyIndex++;
+}
+
+function undo() {
+    if (historyIndex > 0) {
+        historyIndex--;
+        applyHistoryState(history[historyIndex]);
+    }
+}
+
+function redo() {
+    if (historyIndex < history.length - 1) {
+        historyIndex++;
+        applyHistoryState(history[historyIndex]);
+    }
+}
+
+function applyHistoryState(jsonStr) {
+    isApplyingHistory = true;
+    try {
+        const state = JSON.parse(jsonStr);
+        mergeResumeData(state, true); // true = silent (no alert)
+    } catch(e) { console.error("Undo error:", e); }
+    isApplyingHistory = false;
+}
 
 // ═══════════════════════════════════════════════════════
 //  INIT
@@ -165,6 +223,12 @@ function setupEventListeners() {
 
     // LinkedIn autofill
     document.getElementById('linkedin-autofill-btn').addEventListener('click', triggerLinkedInAutofill);
+
+    // Keyboard Shortcuts
+    document.addEventListener('keydown', e => {
+        if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo(); }
+        if (e.ctrlKey && e.key === 'y') { e.preventDefault(); redo(); }
+    });
 }
 
 // ═════════════════════════════════════════════════════
@@ -261,8 +325,10 @@ function addItem(type) {
     const tmpl = document.getElementById('tmpl-' + type).content.cloneNode(true);
     const id = Date.now().toString();
     tmpl.querySelector('.list-item').setAttribute('data-id', id);
+    const newChild = tmpl.querySelector('.list-item');
     list.appendChild(tmpl);
     updatePreview();
+    return newChild;
 }
 
 function removeItem(btn) {
@@ -778,14 +844,9 @@ function updatePreview() {
     // Auto save
     clearTimeout(autoSaveTimeout);
     autoSaveTimeout = setTimeout(() => {
-        const snapshot = {
-            ...resumeData,
-            experience: getDynamicItems('experience'),
-            education:  getDynamicItems('education'),
-            projects:   getDynamicItems('projects'),
-            customSections: getCustomSections()
-        };
-        localStorage.setItem('resumeAutosave', JSON.stringify(snapshot));
+        pushToHistory();
+        const snapshot = history[historyIndex] || JSON.stringify(resumeData);
+        localStorage.setItem('resumeAutosave', snapshot);
     }, 1000);
 }
 
@@ -1092,23 +1153,36 @@ function triggerLinkedInAutofill() {
     let expMatch = '';
     let eduMatch = '';
     
-    // Skills
-    let skReg = text.match(/(?:\n|^)(?:Skills|Core Competencies|Technical Skills)[\s:-]*\n([\s\S]*?)(?=\n(?:[A-Z][a-zA-Z\s]+|)[\s:-]*\n|$)/i);
-    if (!skReg) skReg = text.match(/(?:\n|^)(?:Skills)[\s:-]*\n([\s\S]*?)(?=\n\n|$)/i);
-    if (skReg && skReg[1].length > 10) {
-        skillsMatch = skReg[1].replace(/\n/g, ', ').replace(/, \s*,/g, ',').trim();
-    }
+    // Generic block extractor
+    const extractSection = (keywords, nextKeywords) => {
+        const kStr = keywords.join('|');
+        const nextKStr = nextKeywords.join('|');
+        const regex = new RegExp(`(?:\\n|^)(?:${kStr})[\\s:-]*\\n([\\s\\S]*?)(?=\\n(?:${nextKStr})[\\s:-]*\\n|$)`, 'i');
+        const m = text.match(regex);
+        if (m) return m[1].trim();
+        // Fallback: search for keyword and take everything until next keyword
+        const lowerText = text.toLowerCase();
+        for (const kw of keywords) {
+            const idx = lowerText.indexOf(kw.toLowerCase());
+            if (idx !== -1) {
+                let endIdx = text.length;
+                for (const nkw of nextKeywords) {
+                    const nIdx = lowerText.indexOf(nkw.toLowerCase(), idx + kw.length);
+                    if (nIdx !== -1 && nIdx < endIdx) endIdx = nIdx;
+                }
+                return text.slice(idx + kw.length, endIdx).trim();
+            }
+        }
+        return '';
+    };
 
-    // Experience
-    let exReg = text.match(/(?:\n|^)(?:Experience|Work Experience|Employment History)[s:-]*\n([\s\S]*?)(?=\n(?:Education|Skills|Projects|Certifications|References)[\s:-]*\n|$)/i);
-    if (exReg && exReg[1].length > 20) {
-        expMatch = exReg[1].trim();
-    }
+    const sectionNames = ['Education', 'Experience', 'Skills', 'Projects', 'Certifications', 'Languages', 'Work Experience', 'Employment', 'Academic'];
+    skillsMatch = extractSection(['Skills', 'Core Competencies', 'Technical Skills'], sectionNames);
+    expMatch = extractSection(['Experience', 'Work Experience', 'Employment History'], sectionNames);
+    eduMatch = extractSection(['Education', 'Academic Background', 'Academic History'], sectionNames);
 
-    // Education
-    let edReg = text.match(/(?:\n|^)(?:Education|Academic Background|Academic History)[\s:-]*\n([\s\S]*?)(?=\n(?:Experience|Skills|Projects|Certifications|References)[\s:-]*\n|$)/i);
-    if (edReg && edReg[1].length > 10) {
-        eduMatch = edReg[1].trim();
+    if (skillsMatch) {
+         skillsMatch = skillsMatch.replace(/\n/g, ', ').replace(/, \s*,/g, ',').trim();
     }
 
 
@@ -1116,18 +1190,18 @@ function triggerLinkedInAutofill() {
         linkedInPending = {
             name:     nameCandidate,
             title:    titleCandidate || 'Professional',
-            location: text.match(/(?:New York|San Francisco|London|Mumbai|Remote|CA|NY|TX|Dubai|Singapore|Berlin)/i)?.[0] || '',
+            location: text.match(/(?:New York|San Francisco|London|Mumbai|Remote|CA|NY|TX|Dubai|Singapore|Berlin|USA|India|UK|UAE)/i)?.[0] || '',
             email:    emailMatch?.[0] || '',
             phone:    phoneMatch?.[1] || '',
             linkedin: linkedinMatch ? linkedinMatch[0] : '',
             website:  websiteMatch ? websiteMatch[0] : '',
-            summary:  summaryMatch.replace(/\n\s*\n/g, '\n').slice(0, 500),
-            skills:   skillsMatch,
-            experience_raw: expMatch,
-            education_raw: eduMatch
+            summary:  (summaryMatch || "").replace(/\n\s*\n/g, '\n').slice(0, 500),
+            skills:   skillsMatch || "",
+            experience_raw: expMatch || "",
+            education_raw: eduMatch || ""
         };
         showLinkedInModal();
-        status.textContent = '✓ Parsing complete! Review the results.';
+        status.textContent = '✓ Analysis complete. Please review the changes in the popup.';
         status.className = 'linkedin-status success';
     }, 1000);
 }
@@ -1136,75 +1210,129 @@ function showLinkedInModal() {
     const modal = document.getElementById('linkedin-modal');
     const body  = document.getElementById('linkedin-modal-body');
     const fields = ['name','title','location','email','linkedin','summary', 'skills', 'experience_raw', 'education_raw'];
-    const labels = { name:'Full Name', title:'Job Title', location:'Location', email:'Email', linkedin:'LinkedIn URL', summary:'Summary', skills:'Skills', experience_raw:'Experience (Raw)', education_raw:'Education (Raw)' };
+    const labels = { name:'Full Name', title:'Job Title', location:'Location', email:'Email', linkedin:'LinkedIn URL', summary:'Summary', skills:'Skills', experience_raw:'Work Experience', education_raw:'Education' };
 
-    let rows = fields.map(f => {
+    let sectionsHTML = fields.map(f => {
         let cur = '';
         if (f === 'summary') cur = resumeData.summary || '';
         else if (f === 'skills') cur = resumeData.skills || '';
-        else if (f === 'experience_raw') cur = resumeData.experience.length ? 'Existing Data...' : '';
-        else if (f === 'education_raw') cur = resumeData.education.length ? 'Existing Data...' : '';
+        else if (f === 'experience_raw') cur = resumeData.experience.length ? '(Existing work entries)' : '';
+        else if (f === 'education_raw') cur = resumeData.education.length ? '(Existing education entries)' : '';
         else cur = resumeData.personal[f] || '';
 
         let nw  = linkedInPending[f] || '';
-        if (nw && nw.length > 80) nw = nw.slice(0, 77) + '...';
-        
         const changed = nw && nw !== cur;
-        if (!cur && !nw) return ''; // Skip empty fields entirely
-        return `<tr>
-          <td><strong>${labels[f]}</strong></td>
-          <td class="old-val">${cur || '<em>Empty</em>'}</td>
-          <td class="${changed ? 'new-val' : ''}">${nw || '—'}</td>
-        </tr>`;
+        if (!cur && !nw) return '';
+
+        const clearBtn = cur
+            ? `<button onclick="clearResumeSection('${f}')" style="background:rgba(255,68,68,0.12);border:1px solid rgba(255,68,68,0.3);color:#f87171;border-radius:0.3rem;padding:2px 8px;font-size:0.7rem;cursor:pointer;font-family:inherit;">&#128465; Clear Current</button>`
+            : '';
+
+        const curSafe = cur ? cur.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>') : '<span class="empty-val">Empty</span>';
+        const nwSafe  = nw  ? nw .replace(/</g,'&lt;').replace(/>/g,'&gt;') : '';
+
+        return `
+        <div class="compare-section ${changed ? 'changed' : ''}">
+            <div class="compare-header">
+                <label style="display:flex;align-items:center;gap:0.65rem;cursor:pointer">
+                    <input type="checkbox" class="compare-check" data-field="${f}" ${nw ? 'checked' : ''} style="accent-color:#10b981;width:1.15rem;height:1.15rem;">
+                    <span class="compare-label">${labels[f]}</span>
+                </label>
+                <div style="display:flex;gap:0.4rem;align-items:center">
+                    ${changed ? '<span class="compare-badge">Modified</span>' : ''}
+                    ${clearBtn}
+                </div>
+            </div>
+            <div class="compare-grid">
+                <div class="compare-col current">
+                    <div class="col-label">Current in Resume</div>
+                    <div class="col-content" id="cur-${f}">${curSafe}</div>
+                </div>
+                <div class="compare-col new">
+                    <div class="col-label">Extracted — Click to edit</div>
+                    <textarea class="compare-edit-input" data-field="${f}" id="edit-${f}">${nwSafe}</textarea>
+                </div>
+            </div>
+        </div>`;
     }).join('');
 
     body.innerHTML = `
-        <p style="font-size:0.85rem;color:var(--text-dim);margin-bottom:1rem">
-          ⚠️ Note: Direct LinkedIn API requires OAuth. This shows a simulation using data parsed from your URL. In production, integrate the LinkedIn API for real data.
-        </p>
-        <table class="linkedin-compare-table">
-          <thead><tr><th>Field</th><th>Current</th><th>LinkedIn</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>`;
+        <div class="compare-intro">
+            <p>&#9745; Check a field to include it &nbsp;|&nbsp; &#9998; Click the right panel to edit &nbsp;|&nbsp; Use <strong style="color:var(--text-main)">Clear Current</strong> to wipe existing data first.</p>
+        </div>
+        <div class="compare-list">${sectionsHTML}</div>`;
     modal.style.display = 'flex';
 }
 
+function toggleAllCompareChecks(state) {
+    document.querySelectorAll('.compare-check').forEach(cb => cb.checked = state);
+}
+
+function clearResumeSection(field) {
+    if (field === 'summary') {
+        resumeData.summary = '';
+        const el = document.getElementById('input-summary');
+        if (el) el.value = '';
+    } else if (field === 'skills') {
+        resumeData.skills = '';
+        const el = document.getElementById('input-skills');
+        if (el) el.value = '';
+    } else if (field === 'experience_raw') {
+        resumeData.experience = [];
+        document.getElementById('experience-list').innerHTML = '';
+    } else if (field === 'education_raw') {
+        resumeData.education = [];
+        document.getElementById('education-list').innerHTML = '';
+    } else if (resumeData.personal.hasOwnProperty(field)) {
+        resumeData.personal[field] = '';
+        const el = document.getElementById('input-' + field);
+        if (el) el.value = '';
+    }
+    const curEl = document.getElementById('cur-' + field);
+    if (curEl) curEl.innerHTML = '<span class="empty-val">Cleared \u2713</span>';
+    updatePreview();
+}
+
 function applyLinkedInData() {
-    Object.keys(linkedInPending).forEach(k => {
-        if (!linkedInPending[k]) return;
+    const sections = document.querySelectorAll('.compare-section');
+    sections.forEach(sec => {
+        const checkbox = sec.querySelector('.compare-check');
+        if (!checkbox || !checkbox.checked) return;
+
+        const k = checkbox.getAttribute('data-field');
+        const val = sec.querySelector('.compare-edit-input').value;
         
         if (k === 'summary') {
-            resumeData.summary = linkedInPending[k];
-            document.getElementById('input-summary').value = linkedInPending[k];
+            resumeData.summary = val;
+            document.getElementById('input-summary').value = val;
         } else if (k === 'skills') {
-            resumeData.skills = linkedInPending[k];
-            document.getElementById('input-skills').value = linkedInPending[k];
+            resumeData.skills = val;
+            document.getElementById('input-skills').value = val;
         } else if (k === 'experience_raw') {
             resumeData.experience = [];
             document.getElementById('experience-list').innerHTML = '';
-            addItem('experience');
-            const el = document.getElementById('experience-list').lastElementChild;
-            if(el) {
-                el.querySelector('.item-company').value = "Imported Parsed Block";
-                el.querySelector('.item-position').value = "Please reformat the data below";
-                el.querySelector('.item-desc').value = linkedInPending[k];
+            const newItem = addItem('experience');
+            if(newItem) {
+                newItem.querySelector('.item-company').value = "Imported Parsed Block";
+                newItem.querySelector('.item-position').value = "Work History Summary";
+                newItem.querySelector('.item-desc').value = val;
             }
         } else if (k === 'education_raw') {
             resumeData.education = [];
             document.getElementById('education-list').innerHTML = '';
-            addItem('education');
-            const el = document.getElementById('education-list').lastElementChild;
-            if(el) {
-                el.querySelector('.item-school').value = "Imported Parsed Block";
-                el.querySelector('.item-degree').value = "Please reformat the data below";
-                el.querySelector('.item-desc').value = linkedInPending[k];
+            const newItem = addItem('education');
+            if(newItem) {
+                newItem.querySelector('.item-school').value = "Imported Parsed Block";
+                newItem.querySelector('.item-degree').value = "Education Summary";
+                newItem.querySelector('.item-desc').value = val;
             }
         } else if (resumeData.personal.hasOwnProperty(k)) {
-            resumeData.personal[k] = linkedInPending[k];
+            resumeData.personal[k] = val;
             const el = document.getElementById('input-' + k);
-            if (el) el.value = linkedInPending[k];
+            if (el) el.value = val;
         }
     });
+
     closeLinkedInModal();
     updatePreview();
 }
@@ -1334,12 +1462,12 @@ function loadFromURL() {
 // ═════════════════════════════════════════════════════
 //  MERGE (for upload & URL load)
 // ═════════════════════════════════════════════════════
-function mergeResumeData(data) {
+function mergeResumeData(data, silent = false) {
     if (data.personal)  Object.assign(resumeData.personal, data.personal);
-    if (data.summary)   resumeData.summary = data.summary;
-    if (data.skills)    resumeData.skills  = data.skills;
+    if (data.summary !== undefined)   resumeData.summary = data.summary;
+    if (data.skills !== undefined)    resumeData.skills  = data.skills;
     if (data.settings)  Object.assign(resumeData.settings, data.settings);
-    if (data.photo)     resumeData.photo   = data.photo;
+    if (data.photo !== undefined)     resumeData.photo   = data.photo;
     if (data.iconSet)   resumeData.iconSet = data.iconSet;
 
     // Repopulate text inputs
@@ -1349,14 +1477,17 @@ function mergeResumeData(data) {
         if (el) el.value = p[k] || '';
     });
     const sumEl = document.getElementById('input-summary');
-    if (sumEl) sumEl.value = resumeData.summary;
+    if (sumEl) sumEl.value = resumeData.summary || '';
     const skEl = document.getElementById('input-skills');
-    if (skEl) skEl.value = resumeData.skills;
+    if (skEl) skEl.value = resumeData.skills || '';
 
     // Photo
     if (resumeData.photo) {
         document.getElementById('photo-preview').innerHTML = `<img src="${resumeData.photo}" alt="Profile photo">`;
         document.getElementById('remove-photo-btn').style.display = 'inline-block';
+    } else {
+        document.getElementById('photo-preview').innerHTML = '<span>📷</span><small>Click to upload photo</small>';
+        document.getElementById('remove-photo-btn').style.display = 'none';
     }
 
     // Apply theme/font
@@ -1380,11 +1511,10 @@ function mergeResumeData(data) {
         if (!list || !data[type]) return;
         list.innerHTML = '';
         data[type].forEach(item => {
-            addItem(type);
-            const el = list.lastElementChild;
-            if (!el) return;
+            const newItem = addItem(type);
+            if (!newItem) return;
             Object.keys(item).forEach(key => {
-                const inp = el.querySelector('.item-' + key);
+                const inp = newItem.querySelector('.item-' + key);
                 if (inp) inp.value = item[key];
             });
         });
@@ -1426,7 +1556,7 @@ function mergeResumeData(data) {
 
     refreshSidebarNav();
     updatePreview();
-    alert('✅ Resume loaded successfully!');
+    if (!silent) alert('✅ Resume loaded successfully!');
 }
 
 // ═════════════════════════════════════════════════════
@@ -1501,14 +1631,44 @@ async function extractTextFromPDF(file) {
     status.className = 'linkedin-status';
 
     try {
+        if (typeof pdfjsLib === 'undefined') {
+             throw new Error("PDF library not loaded correctly.");
+        }
+        
+        // Ensure worker is configured
+        if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
         let fullText = '';
+        
         for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i);
             const textContent = await page.getTextContent();
-            fullText += textContent.items.map(item => item.str).join(' ') + '\n';
+            
+            // Smarter spacing: group by vertical position
+            let lastY, pageText = '';
+            for (const item of textContent.items) {
+                const currentY = item.transform[5];
+                if (lastY !== undefined && Math.abs(lastY - currentY) > 2) {
+                    pageText += '\n';
+                } else if (lastY !== undefined) {
+                    // Check if there's enough horizontal distance for a space
+                    pageText += ' ';
+                }
+                pageText += item.str;
+                lastY = currentY;
+            }
+            fullText += pageText + '\n';
         }
+        
+        fullText = fullText.replace(/ {2,}/g, ' '); // Clean redundant spaces
+        
+        if (!fullText.trim()) throw new Error("Could not extract any text from PDF.");
+        
+        status.textContent = `✓ Extracted ${fullText.split(/\s+/).length} words. Analyzing...`;
         document.getElementById('import-text-input').value = fullText;
         triggerLinkedInAutofill();
     } catch (err) {
@@ -1526,48 +1686,105 @@ function saveCurrentProfile() {
     let name = prompt('Enter a name for this profile (e.g. Software Engineer, Civil Engineer):');
     if (!name) return;
     
-    const snapshot = {
-        ...resumeData,
-        experience: getDynamicItems('experience'),
-        education:  getDynamicItems('education'),
-        projects:   getDynamicItems('projects'),
-        customSections: getCustomSections()
-    };
+    const snapshot = getResumeSnapshot();
+    const newId = 'prof_' + Date.now();
     
     profiles.push({
-        id: 'prof_' + Date.now(),
+        id: newId,
         name: name,
         date: new Date().toLocaleDateString(),
         data: snapshot
     });
     
     localStorage.setItem('resumeProfiles', JSON.stringify(profiles));
+    activeProfileId = newId;
     loadProfileList();
-    alert('✅ Profile saved successfully!');
+    alert('✅ Profile saved and set as active!');
+}
+
+function updateActiveProfile() {
+    if (!activeProfileId) {
+        saveCurrentProfile();
+        return;
+    }
+    
+    let profiles = JSON.parse(localStorage.getItem('resumeProfiles') || '[]');
+    let idx = profiles.findIndex(p => p.id === activeProfileId);
+    
+    if (idx === -1) {
+        activeProfileId = null;
+        saveCurrentProfile();
+        return;
+    }
+
+    profiles[idx].data = getResumeSnapshot();
+    profiles[idx].date = new Date().toLocaleDateString() + ' (Updated)';
+    
+    localStorage.setItem('resumeProfiles', JSON.stringify(profiles));
+    loadProfileList();
+    alert('✅ Active profile updated successfully!');
+}
+
+function getResumeSnapshot() {
+    return {
+        ...resumeData,
+        experience: getDynamicItems('experience'),
+        education:  getDynamicItems('education'),
+        projects:   getDynamicItems('projects'),
+        customSections: getCustomSections()
+    };
 }
 
 function loadProfileList() {
     const list = document.getElementById('profiles-list');
+    const sideIndicator = document.getElementById('active-profile-indicator');
+    const sideName = document.getElementById('current-profile-name');
+    const quickUpdateBtn = document.getElementById('sidebar-update-btn');
+    
     if (!list) return;
     list.innerHTML = '';
     let profiles = JSON.parse(localStorage.getItem('resumeProfiles') || '[]');
     
+    if (activeProfileId) {
+        const activeProf = profiles.find(p => p.id === activeProfileId);
+        if (activeProf) {
+            if (sideIndicator) sideIndicator.style.display = 'block';
+            if (sideName) sideName.textContent = activeProf.name;
+            if (quickUpdateBtn) quickUpdateBtn.style.display = 'block';
+        } else {
+            activeProfileId = null;
+            if (sideIndicator) sideIndicator.style.display = 'none';
+            if (quickUpdateBtn) quickUpdateBtn.style.display = 'none';
+        }
+    } else {
+        if (sideIndicator) sideIndicator.style.display = 'none';
+        if (quickUpdateBtn) quickUpdateBtn.style.display = 'none';
+    }
+
     if (profiles.length === 0) {
         list.innerHTML = '<p class="input-hint" style="text-align:center; padding: 2rem">No saved profiles yet.</p>';
         return;
     }
     
     profiles.forEach(prof => {
+        const isActive = prof.id === activeProfileId;
         const div = document.createElement('div');
-        div.className = 'list-item';
+        div.className = 'list-item' + (isActive ? ' active-profile-item' : '');
+        div.style.borderLeft = isActive ? '4px solid var(--primary)' : '1px solid var(--border)';
+        
         div.innerHTML = `
-            <div class="item-header" style="margin-bottom:0; border-bottom:none">
-                <div>
-                    <h3 style="font-size:1.05rem; color:var(--text-main); margin-bottom:0.25rem">${prof.name}</h3>
-                    <span style="font-size:0.8rem; color:var(--text-dim)">Saved on: ${prof.date}</span>
+            <div class="item-header" style="margin-bottom:0; border-bottom:none; align-items:center">
+                <div style="flex:1">
+                    <div style="display:flex; align-items:center; gap:0.5rem">
+                        <h3 style="font-size:1.05rem; color:var(--text-main); margin-bottom:0">${prof.name}</h3>
+                        ${isActive ? '<span class="active-badge">ACTIVE</span>' : ''}
+                    </div>
+                    <span style="font-size:0.8rem; color:var(--text-dim)">${prof.date}</span>
                 </div>
-                <div class="item-header-actions">
-                    <button class="btn btn-primary" style="padding:0.4rem 0.8rem" onclick="loadProfile('${prof.id}')">Load</button>
+                <div class="item-header-actions" style="gap:0.4rem">
+                    <button class="btn ${isActive ? 'btn-secondary' : 'btn-primary'}" style="padding:0.4rem 0.8rem; font-size: 0.75rem" onclick="loadProfile('${prof.id}')">${isActive ? 'Reload' : 'Load'}</button>
+                    <button class="btn btn-secondary" style="padding:0.4rem 0.8rem; font-size: 0.75rem" onclick="renameProfile('${prof.id}', '${prof.name.replace(/'/g, "\\'")}')" title="Rename">✏️</button>
+                    <button class="btn btn-secondary" style="padding:0.4rem 0.8rem; font-size: 0.75rem" onclick="duplicateProfile('${prof.id}')" title="Duplicate Profile">📋</button>
                     <button class="btn-remove" onclick="deleteProfile('${prof.id}')">×</button>
                 </div>
             </div>
@@ -1577,19 +1794,56 @@ function loadProfileList() {
 }
 
 function loadProfile(id) {
-    if (!confirm('Loading a profile will overwrite your current unsaved changes. Continue?')) return;
+    if (!confirm('Loading this profile will overwrite your current changes. Continue?')) return;
     let profiles = JSON.parse(localStorage.getItem('resumeProfiles') || '[]');
     const prof = profiles.find(p => p.id === id);
     if (prof) {
+        activeProfileId = id;
         mergeResumeData(prof.data);
-        document.getElementById('nav-personal').click(); // Switch to personal tab
+        loadProfileList(); // Refresh to show active state
+        document.getElementById('nav-personal').click(); 
     }
 }
 
 function deleteProfile(id) {
     if (!confirm('Are you sure you want to delete this profile?')) return;
+    if (id === activeProfileId) activeProfileId = null;
     let profiles = JSON.parse(localStorage.getItem('resumeProfiles') || '[]');
     profiles = profiles.filter(p => p.id !== id);
     localStorage.setItem('resumeProfiles', JSON.stringify(profiles));
     loadProfileList();
+}
+
+function duplicateProfile(id) {
+    let profiles = JSON.parse(localStorage.getItem('resumeProfiles') || '[]');
+    const prof = profiles.find(p => p.id === id);
+    if (!prof) return;
+
+    const newName = prompt('Enter a name for the duplicated profile:', prof.name + ' (Copy)');
+    if (!newName) return;
+
+    const newProf = {
+        ...prof,
+        id: 'prof_' + Date.now(),
+        name: newName,
+        date: new Date().toLocaleDateString()
+    };
+
+    profiles.push(newProf);
+    localStorage.setItem('resumeProfiles', JSON.stringify(profiles));
+    loadProfileList();
+    alert('✅ Profile duplicated!');
+}
+
+function renameProfile(id, currentName) {
+    const newName = prompt('Enter a new name for this profile:', currentName);
+    if (!newName || newName === currentName) return;
+
+    let profiles = JSON.parse(localStorage.getItem('resumeProfiles') || '[]');
+    let idx = profiles.findIndex(p => p.id === id);
+    if (idx !== -1) {
+        profiles[idx].name = newName;
+        localStorage.setItem('resumeProfiles', JSON.stringify(profiles));
+        loadProfileList();
+    }
 }
