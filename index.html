@@ -31,8 +31,20 @@
             <header class="sidebar-header">
                 <div class="logo">Architect.</div>
                 <p class="tagline">ATS-Optimized Resume Builder</p>
-                <div id="active-profile-indicator" style="margin-top:0.75rem; font-size:0.75rem; color:var(--primary); font-weight:600; display:none">
-                    Editing: <span id="current-profile-name">None</span>
+                
+                <div class="strength-container" style="margin-top: 1.5rem; padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 1rem; border: 1px solid var(--border);">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem">
+                        <span style="font-size:0.7rem; font-weight:600; color:var(--text-dim)">RESUME STRENGTH</span>
+                        <span id="strength-percent" style="font-size:0.7rem; font-weight:700; color:var(--primary)">0%</span>
+                    </div>
+                    <div class="strength-bar-bg" style="height:6px; background:rgba(255,255,255,0.05); border-radius:3px; overflow:hidden">
+                        <div id="strength-bar-fill" style="width:0%; height:100%; background:linear-gradient(to right, #818cf8, #f472b6); transition: width 0.5s ease-out;"></div>
+                    </div>
+                    <p id="strength-tip" style="font-size:0.65rem; color:var(--text-dim); margin-top:0.5rem; font-style:italic">Add a professional summary to boost score.</p>
+                </div>
+
+                <div id="active-profile-indicator" style="margin-top:1rem; padding:0.6rem 0.8rem; background:rgba(99,102,241,0.1); border-radius:0.75rem; font-size:0.75rem; color:var(--primary); font-weight:600; display:none; border:1px solid rgba(99,102,241,0.2)">
+                    <span style="opacity:0.7">Editing:</span> <span id="current-profile-name">None</span>
                 </div>
             </header>
 
@@ -63,7 +75,7 @@
                         <span class="icon">💾</span><span class="nav-label">My Profiles</span>
                     </button>
                     <button class="nav-item" data-section="settings" id="nav-settings">
-                        <span class="icon">🎨</span><span class="nav-label">Themes & Style</span>
+                        <span class="icon">🖼️</span><span class="nav-label">Templates & Design</span>
                     </button>
                 </nav>
 
@@ -101,7 +113,10 @@
 
             <!-- ── PERSONAL INFO ── -->
             <div id="form-personal" class="form-section active">
-                <h2>Personal Details</h2>
+                <div class="section-header">
+                    <h2>Personal Details</h2>
+                    <button class="btn btn-secondary btn-small" onclick="clearPersonalData()">🗑 Clear</button>
+                </div>
 
                 <!-- Photo Upload -->
                 <div class="photo-upload-container">
@@ -186,7 +201,10 @@
 
             <!-- ── SUMMARY ── -->
             <div id="form-summary" class="form-section">
-                <h2>Professional Summary</h2>
+                <div class="section-header">
+                    <h2>Professional Summary</h2>
+                    <button class="btn btn-secondary btn-small" onclick="clearSummaryData()">🗑 Clear</button>
+                </div>
                 <div class="ai-assist-bar">
                     <span class="ai-badge">✨ AI</span>
                     <input type="text" id="ai-job-title-input" placeholder="e.g. Software Engineer at Google…">
@@ -205,7 +223,10 @@
             <div id="form-experience" class="form-section">
                 <div class="section-header">
                     <h2>Work Experience</h2>
-                    <button class="btn-add" onclick="addItem('experience')">+ Add Experience</button>
+                    <div style="display:flex; gap:0.5rem">
+                         <button class="btn btn-secondary btn-small" onclick="clearExperienceData()">🗑 Clear</button>
+                         <button class="btn btn-primary btn-small" onclick="addItem('experience')">+ Add Experience</button>
+                    </div>
                 </div>
                 <div id="experience-list" class="dynamic-list"></div>
                 <button class="btn btn-secondary" style="margin-top:2rem; width:100%; border: 1px dashed var(--border)" onclick="document.getElementById('nav-custom').click()">✨ Need to add custom experience/data? Add a Custom Tab here</button>
@@ -215,7 +236,10 @@
             <div id="form-education" class="form-section">
                 <div class="section-header">
                     <h2>Education</h2>
-                    <button class="btn-add" onclick="addItem('education')">+ Add Education</button>
+                    <div style="display:flex; gap:0.5rem">
+                         <button class="btn btn-secondary btn-small" onclick="clearEducationData()">🗑 Clear</button>
+                         <button class="btn btn-primary btn-small" onclick="addItem('education')">+ Add Education</button>
+                    </div>
                 </div>
                 <div id="education-list" class="dynamic-list"></div>
                 <button class="btn btn-secondary" style="margin-top:2rem; width:100%; border: 1px dashed var(--border)" onclick="document.getElementById('nav-custom').click()">✨ Need to add custom education/data? Add a Custom Tab here</button>
@@ -223,7 +247,10 @@
 
             <!-- ── SKILLS ── -->
             <div id="form-skills" class="form-section">
-                <h2>Skills</h2>
+                <div class="section-header">
+                    <h2>Skills</h2>
+                    <button class="btn btn-secondary btn-small" onclick="clearSkillsData()">🗑 Clear</button>
+                </div>
                 <div class="ai-assist-bar">
                     <span class="ai-badge">✨ AI</span>
                     <input type="text" id="ai-skills-input" placeholder="e.g. Frontend Developer, React, 3 years…">
@@ -242,7 +269,10 @@
             <div id="form-projects" class="form-section">
                 <div class="section-header">
                     <h2>Key Projects</h2>
-                    <button class="btn-add" onclick="addItem('projects')">+ Add Project</button>
+                    <div style="display:flex; gap:0.5rem">
+                        <button class="btn btn-secondary btn-small" onclick="clearProjectsData()">🗑 Clear</button>
+                        <button class="btn btn-primary btn-small" onclick="addItem('projects')">+ Add Project</button>
+                    </div>
                 </div>
                 <div id="projects-list" class="dynamic-list"></div>
                 <button class="btn btn-secondary" style="margin-top:2rem; width:100%; border: 1px dashed var(--border)" onclick="document.getElementById('nav-custom').click()">✨ Need to add custom project data? Add a Custom Tab here</button>
@@ -280,13 +310,13 @@
                 </div>
             </div>
 
-            <!-- ── THEMES & STYLE ── -->
+            <!-- ── TEMPLATES & DESIGN ── -->
             <div id="form-settings" class="form-section">
-                <h2>Theme & Layout</h2>
-                <div class="theme-grid">
+                <h2>Templates & Customization</h2>
+                <div class="theme-grid" id="theme-grid">
                     <button class="theme-card active" data-theme="theme-modern">
                         <div class="theme-preview modern"></div>
-                        <span>Modern Sidebar</span>
+                        <span>SaaS Modern</span>
                     </button>
                     <button class="theme-card" data-theme="theme-minimal">
                         <div class="theme-preview minimal"></div>

@@ -105,11 +105,17 @@ function setupNavigation() {
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', () => {
             const sec = item.getAttribute('data-section');
+            const label = item.querySelector('.nav-label').textContent;
+            
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             item.classList.add('active');
+            
             document.querySelectorAll('.form-section').forEach(s => s.classList.remove('active'));
-            document.getElementById('form-' + sec).classList.add('active');
-            // close sidebar on mobile
+            const targetSec = document.getElementById('form-' + sec);
+            if (targetSec) targetSec.classList.add('active');
+            
+            document.title = `${label} | AI Resume Architect`;
+
             if (window.innerWidth <= 640) {
                 document.getElementById('sidebar').classList.remove('mobile-open');
             }
@@ -393,812 +399,32 @@ function addCustomSection(side = 'right') {
     updatePreview();
     
     // Auto-switch to newly created section
-    setTimeout(() => {
-        const navBtn = document.querySelector(`.nav-item[data-section="${id}"]`);
-        if (navBtn) navBtn.click();
-    }, 10);
-}
-
-function removeCustomSection(id) {
-    if (!confirm('Are you sure you want to delete this custom section tab?')) return;
-    const sec = document.getElementById('form-' + id);
-    if (sec) sec.remove();
-    refreshSidebarNav();
-    updatePreview();
-    document.getElementById('nav-personal').click(); // Switch to personal tab
-}
-
-function refreshSidebarNav() {
-    const container = document.getElementById('dynamic-nav-sections');
-    container.innerHTML = '';
-    document.querySelectorAll('.form-custom-section-instance').forEach(el => {
-        const title = el.querySelector('.cs-title').value || 'New Section';
-        const id = el.getAttribute('data-cid');
-        const btn = document.createElement('button');
-        btn.className = 'nav-item';
-        btn.setAttribute('data-section', id);
-        btn.innerHTML = `<span class="icon">✨</span><span class="nav-label">${title}</span>`;
-        btn.onclick = () => {
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            btn.classList.add('active');
-            document.querySelectorAll('.form-section').forEach(s => s.classList.remove('active'));
-            document.getElementById('form-' + id).classList.add('active');
-            if (window.innerWidth <= 640) {
-                document.getElementById('sidebar').classList.remove('mobile-open');
-            }
-        };
-        container.appendChild(btn);
-    });
-}
-
-function addCustomEntry(btn) {
-    const entries = btn.previousElementSibling;
-    const div = document.createElement('div');
-    div.className = 'custom-entry';
-    div.innerHTML = `
-      <div style="display:flex; justify-content:flex-end; gap:0.5rem; margin-bottom:0.5rem">
-        <button class="ai-item-btn" onclick="aiEnhanceCustomEntry(this)" title="AI Enhance" style="background:transparent; border:none; cursor:pointer; font-size:1.2rem">✨</button>
-        <button class="btn-remove" onclick="this.closest('.custom-entry').remove();updatePreview()" style="background:transparent; border:none; color:var(--accent-red); cursor:pointer; font-size:1.2rem; line-height:1">×</button>
-      </div>
-      <div class="input-row">
-        <div class="input-group">
-          <label>Entry Title</label>
-          <input type="text" class="ce-title" placeholder="e.g. AWS Certified Developer" oninput="updatePreview()">
-        </div>
-        <div class="input-group">
-          <label>Date / Detail</label>
-          <input type="text" class="ce-date" placeholder="e.g. 2023" oninput="updatePreview()">
-        </div>
-      </div>
-      <div class="input-group">
-        <label>Extra Details / Bullet Points</label>
-        <div class="ce-lines"></div>
-        <button class="btn-add" style="font-size:0.75rem; padding:0.2rem 0.5rem" onclick="addCustomLine(this)">+ Add Bullet Point</button>
-      </div>
-      <div class="input-group">
-        <label>Description (One block)</label>
-        <textarea class="ce-desc" placeholder="Additional details…" oninput="updatePreview()" rows="2"></textarea>
-      </div>
-    `;
-    div.style.position = 'relative';
-    entries.appendChild(div);
-}
-
-function insertBullet(btn) {
-    const textarea = btn.parentElement.querySelector('textarea');
-    if (textarea) {
-        let val = textarea.value;
-        if (val && !val.endsWith('\n')) val += '\n';
-        textarea.value = val + '• ';
-        textarea.focus();
-        updatePreview();
-    }
-}
-
-function addCustomLine(btn) {
-    const container = btn.previousElementSibling;
-    const div = document.createElement('div');
-    div.className = 'custom-line-item';
-    div.innerHTML = `
-        <div style="display:flex; gap:0.5rem; margin-bottom:0.25rem">
-            <input type="text" class="ce-line-val" placeholder="Detail point…" oninput="updatePreview()">
-            <button class="btn-remove" style="padding:0 0.5rem" onclick="this.parentElement.remove();updatePreview()">×</button>
-        </div>
-    `;
-    container.appendChild(div);
-}
-
-function getCustomSections() {
-    const sections = [];
-    document.querySelectorAll('.form-custom-section-instance').forEach(el => {
-        const title = el.querySelector('.cs-title')?.value || '';
-        const desc  = el.querySelector('.cs-desc')?.value  || '';
-        const side  = el.querySelector('.cs-side')?.value  || 'right';
-        const entries = [];
-        el.querySelectorAll('.custom-entry').forEach(e => {
-            const lines = [];
-            e.querySelectorAll('.ce-line-val').forEach(l => lines.push(l.value));
-            entries.push({
-                title: e.querySelector('.ce-title')?.value || '',
-                date:  e.querySelector('.ce-date')?.value  || '',
-                desc:  e.querySelector('.ce-desc')?.value  || '',
-                lines: lines
-            });
-        });
-        if (title) sections.push({ title, desc, side, entries });
-    });
-    return sections;
-}
-
-// ═════════════════════════════════════════════════════
-//  SETTINGS
-// ═════════════════════════════════════════════════════
-function setPageSize(size) {
-    resumeData.settings.pageSize = size;
-    updatePreview();
-}
-
-const PAGE_DIMENSIONS = {
-    a4:     { w: '210mm', h: '297mm' },
-    letter: { w: '216mm', h: '279mm' },
-    legal:  { w: '216mm', h: '356mm' }
-};
-
-function setSidebarSide(side) {
-    resumeData.settings.sidebarSide = side;
-    const btnLeft = document.getElementById('side-left');
-    const btnRight = document.getElementById('side-right');
-    if (btnLeft) btnLeft.classList.toggle('active', side === 'left');
-    if (btnRight) btnRight.classList.toggle('active', side === 'right');
-    updatePreview();
-}
-
-// ═════════════════════════════════════════════════════
-//  PREVIEW RENDERER
-// ═════════════════════════════════════════════════════
-let autoSaveTimeout = null;
-
-function updatePreview() {
-    const preview = document.getElementById('resume-preview');
-    const { personal, summary, settings } = resumeData;
-    const experience = getDynamicItems('experience');
-    const education  = getDynamicItems('education');
-    const projects   = getDynamicItems('projects');
-    const customs    = getCustomSections();
-    const icons      = getIcons();
-    const fs         = settings.fontSize;
-    const hfs        = settings.headingSize || 16;
-    const hFont      = settings.headingFont || 'font-inter';
-
-    const FONT_FAMILIES = {
-        'font-inter': "'Inter', sans-serif",
-        'font-outfit': "'Outfit', sans-serif",
-        'font-arial': "Arial, Helvetica, sans-serif",
-        'font-serif': "'Playfair Display', Georgia, serif",
-        'font-lato': "'Lato', sans-serif",
-        'font-merriweather': "'Merriweather', Georgia, serif"
-    };
-
-    preview.className = `resume-paper ${settings.theme} ${settings.font} ${settings.sidebarSide === 'right' ? 'sidebar-right' : ''}`;
-    
-    // Page Size Styling
-    const dim = PAGE_DIMENSIONS[settings.pageSize || 'a4'];
-    preview.style.width = dim.w;
-    preview.style.minHeight = dim.h;
-
-    preview.style.setProperty('--resume-primary', settings.primaryColor);
-    preview.style.setProperty('--resume-text', settings.textColor);
-    preview.style.setProperty('--resume-heading-font', FONT_FAMILIES[hFont] || FONT_FAMILIES['font-inter']);
-    preview.style.setProperty('--resume-heading-size', hfs + 'pt');
-    preview.style.color = settings.textColor;
-    preview.style.fontSize = fs + 'pt';
-
-    const photoHTML = resumeData.photo
-        ? `<img src="${resumeData.photo}" class="resume-photo" alt="Profile">`
-        : '';
-
-    const contactInlineHTML = `
-        <div class="contact-inline">
-            ${personal.email    ? `<span>${icons.email} <a href="mailto:${personal.email}">${personal.email}</a></span>` : ''}
-            ${personal.phone    ? `<span>${icons.phone} <a href="tel:${personal.phone}">${personal.phone}</a></span>` : ''}
-            ${personal.location ? `<span>${icons.location} ${personal.location}</span>` : ''}
-            ${personal.linkedin ? `<span>${icons.linkedin} <a href="${personal.linkedin.startsWith('http') ? personal.linkedin : 'https://' + personal.linkedin}" target="_blank">LinkedIn</a></span>` : ''}
-            ${personal.github   ? `<span>${icons.github} <a href="${personal.github.startsWith('http') ? personal.github : 'https://' + personal.github}" target="_blank">GitHub</a></span>` : ''}
-            ${personal.website  ? `<span>${icons.website} <a href="${personal.website.startsWith('http') ? personal.website : 'https://' + personal.website}" target="_blank">${personal.website}</a></span>` : ''}
-            ${personal.twitter  ? `<span>${icons.twitter} <a href="https://twitter.com/${personal.twitter.replace('@','')}" target="_blank">${personal.twitter}</a></span>` : ''}
-        </div>`;
-
-    const experienceHTML = experience.length ? `
-        <div class="section-title">Experience</div>
-        ${experience.map(exp => `
-          <div class="experience-item">
-            <div class="item-meta">
-              <span>${exp.position || 'Position'}</span>
-              <span>${exp.duration || ''}</span>
-            </div>
-            <div class="item-submeta">
-              <span>${exp.company || 'Company'}</span>
-              <span>${exp.city || ''}</span>
-            </div>
-            <div class="item-description">${renderDescription(exp.desc)}</div>
-          </div>`).join('')}` : '';
-
-    const educationHTML = education.length ? `
-        <div class="section-title">Education</div>
-        ${education.map(edu => `
-          <div class="education-item">
-            <div class="item-meta">
-              <span>${edu.school || 'Institution'}</span>
-              <span>${edu.year || ''}</span>
-            </div>
-            <div class="item-submeta">
-              <span>${edu.degree || 'Degree'}</span>
-              <span>${edu.score || ''}</span>
-            </div>
-            ${edu.desc ? `<div class="item-description">${renderDescription(edu.desc)}</div>` : ''}
-          </div>`).join('')}` : '';
-
-    const projectsHTML = projects.length ? `
-        <div class="section-title">Projects</div>
-        ${projects.map(p => `
-          <div class="project-item">
-            <div class="item-meta">
-              <span>${p['project-name'] || p.projectname || 'Project'}</span>
-              <span style="font-size:8pt;color:#6366f1">${p['project-link'] || p.projectlink || ''}</span>
-            </div>
-            ${(p['project-tech'] || p.projecttech) ? `<div class="item-tech-tags">${(p['project-tech']||p.projecttech||'').split(',').map(t=>`<span class="item-tech-tag">${t.trim()}</span>`).join('')}</div>` : ''}
-            <div class="item-description">${p['project-desc'] || p.projectdesc || ''}</div>
-          </div>`).join('')}` : '';
-
-    const leftCustoms  = customs.filter(c => c.side === 'left');
-    const rightCustoms = customs.filter(c => c.side !== 'left');
-
-    const renderCustom = (csList) => csList.map(cs => `
-        <div class="section-title">${cs.title}</div>
-        ${cs.desc ? `<p style="font-size:0.85em;color:var(--text-dim);margin-bottom:2mm">${cs.desc}</p>` : ''}
-        ${cs.entries.map(e => `
-          <div class="custom-section-entry">
-            <div class="item-meta">
-              <span>${e.title}</span>
-              <span style="font-size:0.9em;font-weight:normal">${e.date}</span>
-            </div>
-            ${e.lines && e.lines.length ? `<ul class="custom-bullet-list">${e.lines.map(l => `<li>${l}</li>`).join('')}</ul>` : ''}
-            ${e.desc ? `<div class="item-description">${renderDescription(e.desc)}</div>` : ''}
-          </div>`).join('')}`).join('');
-
-    const leftCustomHTML  = renderCustom(leftCustoms);
-    const rightCustomHTML = renderCustom(rightCustoms);
-
-    const skillsHTML = resumeData.skills ? `
-        <div class="section-title">Skills</div>
-        <div class="skills-list">
-          ${resumeData.skills.split(',').map(s => s.trim() ? `<span class="skill-tag">${s.trim()}</span>` : '').join('')}
-        </div>` : '';
-
-    const summaryHTML = summary ? `
-        <div class="section-title">Profile</div>
-        <p style="margin-bottom:5mm;font-size:${fs}pt">${summary}</p>` : '';
-
-    // ── Theme Renders ──
-    const t = settings.theme;
-
-    if (t === 'theme-modern') {
-        preview.innerHTML = `
-          <div class="resume-sidebar">
-            ${photoHTML ? `<div style="display:flex;justify-content:center;margin-bottom:5mm">${photoHTML}</div>` : ''}
-            <div class="section-title">Contact</div>
-            <div class="contact-info">
-              ${personal.email    ? `<div class="contact-item">${icons.email} <a href="mailto:${personal.email}">${personal.email}</a></div>` : ''}
-              ${personal.phone    ? `<div class="contact-item">${icons.phone} <a href="tel:${personal.phone}">${personal.phone}</a></div>` : ''}
-              ${personal.location ? `<div class="contact-item">${icons.location} ${personal.location}</div>` : ''}
-              ${personal.linkedin ? `<div class="contact-item">${icons.linkedin} <a href="${personal.linkedin.startsWith('http') ? personal.linkedin : 'https://' + personal.linkedin}" target="_blank">LinkedIn</a></div>` : ''}
-              ${personal.github   ? `<div class="contact-item">${icons.github} <a href="${personal.github.startsWith('http') ? personal.github : 'https://' + personal.github}" target="_blank">GitHub</a></div>` : ''}
-              ${personal.website  ? `<div class="contact-item">${icons.website} <a href="${personal.website.startsWith('http') ? personal.website : 'https://' + personal.website}" target="_blank">${personal.website}</a></div>` : ''}
-            </div>
-            ${skillsHTML}
-            ${leftCustomHTML}
-          </div>
-          <div class="resume-main">
-            <div class="resume-name">${personal.name || 'Your Name'}</div>
-            <div class="resume-job-title">${personal.title || 'Professional Title'}</div>
-            ${summaryHTML}
-            ${experienceHTML}
-            ${educationHTML}
-            ${projectsHTML}
-            ${rightCustomHTML}
-          </div>`;
-
-    } else if (t === 'theme-minimal') {
-        preview.innerHTML = `
-          <div class="resume-header">
-            ${photoHTML ? `<div style="float:right;margin-left:8mm">${photoHTML}</div>` : ''}
-            <div class="resume-name">${personal.name || 'Your Name'}</div>
-            <div class="resume-job-title">${personal.title || 'Professional Title'}</div>
-            ${contactInlineHTML}
-          </div>
-          ${summaryHTML}
-          ${experienceHTML}
-          ${educationHTML}
-          ${skillsHTML}
-          ${projectsHTML}
-          ${leftCustomHTML}
-          ${rightCustomHTML}`;
-
-    } else if (t === 'theme-professional') {
-        preview.innerHTML = `
-          <div class="resume-header">
-            <div class="resume-header-left">
-              <div class="resume-name">${personal.name || 'Your Name'}</div>
-              <div class="resume-job-title">${personal.title || 'Professional Title'}</div>
-            </div>
-            <div class="resume-header-right">
-              ${personal.email    ? `<div>${icons.email} ${personal.email}</div>` : ''}
-              ${personal.phone    ? `<div>${icons.phone} ${personal.phone}</div>` : ''}
-              ${personal.location ? `<div>${icons.location} ${personal.location}</div>` : ''}
-              ${personal.linkedin ? `<div>${icons.linkedin} LinkedIn</div>` : ''}
-              ${photoHTML}
-            </div>
-          </div>
-          ${summaryHTML}
-          ${experienceHTML}
-          ${educationHTML}
-          ${skillsHTML}
-          ${projectsHTML}
-          ${leftCustomHTML}
-          ${rightCustomHTML}`;
-
-    } else if (t === 'theme-creative') {
-        preview.innerHTML = `
-          <div class="creative-stripe"></div>
-          <div class="creative-body">
-            <div class="resume-header">
-              ${photoHTML ? `<div style="float:right;margin-left:6mm">${photoHTML}</div>` : ''}
-              <div class="resume-name">${personal.name || 'Your Name'}</div>
-              <div class="resume-job-title">${personal.title || 'Professional Title'}</div>
-              ${contactInlineHTML}
-            </div>
-            ${summaryHTML}
-            ${experienceHTML}
-            ${educationHTML}
-            ${skillsHTML}
-            ${projectsHTML}
-            ${leftCustomHTML}
-          ${rightCustomHTML}
-          </div>`;
-
-    } else if (t === 'theme-executive') {
-        preview.innerHTML = `
-          <div class="executive-header">
-            <div>
-              ${photoHTML ? `<div style="float:left;margin-right:6mm">${photoHTML}</div>` : ''}
-              <div class="resume-name">${personal.name || 'Your Name'}</div>
-              <div class="resume-job-title">${personal.title || 'Professional Title'}</div>
-            </div>
-            <div class="executive-contact">
-              ${personal.email    ? `<div><a href="mailto:${personal.email}" style="color:white;text-decoration:none">${personal.email}</a></div>` : ''}
-              ${personal.phone    ? `<div><a href="tel:${personal.phone}" style="color:white;text-decoration:none">${personal.phone}</a></div>` : ''}
-              ${personal.location ? `<div>${personal.location}</div>` : ''}
-              ${personal.linkedin ? `<div><a href="${personal.linkedin}" style="color:white;text-decoration:none" target="_blank">LinkedIn</a></div>` : ''}
-            </div>
-          </div>
-          <div class="executive-body">
-            <div class="executive-main">
-              ${summaryHTML}
-              ${experienceHTML}
-              ${projectsHTML}
-              ${rightCustomHTML}
-            </div>
-            <div class="executive-side">
-              ${skillsHTML}
-              ${educationHTML}
-              ${leftCustomHTML}
-            </div>
-          </div>`;
-
-    } else if (t === 'theme-techno') {
-        preview.innerHTML = `
-          <div class="techno-header">
-            <div>
-              <div class="resume-name">${personal.name || 'Your Name'}</div>
-              <div class="resume-job-title">${personal.title || 'Professional Title'}</div>
-            </div>
-            ${photoHTML ? `<div>${photoHTML}</div>` : ''}
-          </div>
-          <div class="techno-body">
-            <div style="display:flex;flex-wrap:wrap;gap:4mm;margin-bottom:4mm;font-size:8.5pt;color:#475569">
-              ${personal.email    ? `<span>${icons.email} <a href="mailto:${personal.email}">${personal.email}</a></span>` : ''}
-              ${personal.phone    ? `<span>${icons.phone} <a href="tel:${personal.phone}">${personal.phone}</a></span>` : ''}
-              ${personal.location ? `<span>${icons.location} ${personal.location}</span>` : ''}
-              ${personal.linkedin ? `<span>${icons.linkedin} <a href="${personal.linkedin}" target="_blank">LinkedIn</a></span>` : ''}
-              ${personal.github   ? `<span>${icons.github} <a href="${personal.github}" target="_blank">GitHub</a></span>` : ''}
-            </div>
-            ${summaryHTML}
-            ${experienceHTML}
-            ${educationHTML}
-            ${skillsHTML}
-            ${projectsHTML}
-            ${leftCustomHTML}
-          ${rightCustomHTML}
-          </div>`;
-
-    } else if (t === 'theme-elegant') {
-        preview.innerHTML = `
-          <div class="resume-header">
-            ${photoHTML ? `<div style="display:flex;justify-content:center;margin-bottom:4mm">${photoHTML}</div>` : ''}
-            <div class="resume-name">${personal.name || 'Your Name'}</div>
-            <div class="resume-job-title">${personal.title || 'Professional Title'}</div>
-            <div class="elegant-divider">· · ·</div>
-            ${contactInlineHTML}
-          </div>
-          ${summaryHTML}
-          ${experienceHTML}
-          ${educationHTML}
-          ${skillsHTML}
-          ${projectsHTML}
-          ${leftCustomHTML}
-          ${rightCustomHTML}`;
-
-    } else if (t === 'theme-compact') {
-        preview.innerHTML = `
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2mm">
-            <div>
-              <div class="resume-name">${personal.name || 'Your Name'}</div>
-              <div class="resume-job-title">${personal.title || 'Professional Title'}</div>
-            </div>
-            ${photoHTML}
-          </div>
-          ${contactInlineHTML}
-          <hr class="section-divider">
-          ${summaryHTML}
-          ${experienceHTML}
-          ${educationHTML}
-          ${skillsHTML}
-          ${projectsHTML}
-          ${leftCustomHTML}
-          ${rightCustomHTML}`;
-    }
-
-    // After rendering, check for page breaks
-    setTimeout(updatePageIndicators, 50);
-
-    // Auto save
-    clearTimeout(autoSaveTimeout);
-    autoSaveTimeout = setTimeout(() => {
-        pushToHistory();
-        const snapshot = history[historyIndex] || JSON.stringify(resumeData);
-        localStorage.setItem('resumeAutosave', snapshot);
-    }, 1000);
-}
-
-function updatePageIndicators() {
-    const preview = document.getElementById('resume-preview');
-    const pageSize = resumeData.settings.pageSize || 'a4';
-    
-    // Remove old indicators
-    preview.querySelectorAll('.page-break-indicator').forEach(el => el.remove());
-    
-    // 297mm in pixels (approx 96 DPI * 297 / 25.4)
-    const mmToPx = 3.78; 
-    const pageHeightPx = parseInt(PAGE_DIMENSIONS[pageSize].h) * mmToPx;
-    
-    const contentHeight = preview.scrollHeight;
-    if (contentHeight > pageHeightPx) {
-        let numPages = Math.ceil(contentHeight / pageHeightPx);
-        for (let i = 1; i < numPages; i++) {
-            const indicator = document.createElement('div');
-            indicator.className = 'page-break-indicator';
-            indicator.style.top = (i * pageHeightPx) + 'px';
-            indicator.innerHTML = `<span>Page ${i+1} Boundary</span>`;
-            preview.appendChild(indicator);
-        }
-    }
-}
-
-// ═════════════════════════════════════════════════════
-//  PHOTO
-// ═════════════════════════════════════════════════════
-// removePhoto already defined above (called from HTML)
-
-// ═════════════════════════════════════════════════════
-//  RENDER HELPERS
-// ═════════════════════════════════════════════════════
-function renderDescription(text) {
-    if (!text) return '';
-    // Convert links in description
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    return text.replace(urlRegex, url => `<a href="${url}" target="_blank" style="color:var(--resume-primary)">${url}</a>`);
-}
-
-// ═════════════════════════════════════════════════════
-//  AI ASSISTANCE
-// ═════════════════════════════════════════════════════
-const AI_SUMMARIES = [
-    (t,n) => `Results-driven ${t} with ${n||'5'}+ years of experience delivering high-impact solutions. Proven track record of leading cross-functional teams, optimizing processes, and exceeding organizational objectives through innovative thinking and technical excellence.`,
-    (t,n) => `Dynamic ${t} combining deep technical expertise with strategic business acumen. Skilled at translating complex requirements into scalable solutions, mentoring junior professionals, and driving continuous improvement across the entire development lifecycle.`,
-    (t,n) => `Highly motivated ${t} with a passion for building robust, user-centered products. Experienced in Agile environments, stakeholder communication, and delivering projects on time and within budget across diverse industries.`,
-    (t,n) => `Detail-oriented Civil Engineer with expertise in structural design, site management, and project coordination. Proficient in AutoCAD and Revit, with a strong focus on sustainable infrastructure and safety compliance.`
-];
-
-function aiGenerateSummary() {
-    const jobInput = document.getElementById('ai-job-title-input').value.trim() || resumeData.personal.title || 'Professional';
-    const years = '5';
-    const container = document.getElementById('ai-suggestions');
-    container.innerHTML = '<p style="color:var(--text-dim);font-size:0.8rem">✨ Generating suggestions…</p>';
-
-    setTimeout(() => {
-        container.innerHTML = '';
-        AI_SUMMARIES.forEach(fn => {
-            const chip = document.createElement('div');
-            chip.className = 'ai-suggestion-chip';
-            chip.textContent = fn(jobInput, years);
-            chip.addEventListener('click', () => {
-                document.getElementById('input-summary').value = chip.textContent;
-                resumeData.summary = chip.textContent;
-                container.innerHTML = '';
-                updatePreview();
-            });
-            container.appendChild(chip);
-        });
-    }, 900);
-}
-
-const AI_SKILLS = {
-    default:    ['Communication','Problem Solving','Team Leadership','Project Management','Critical Thinking','Agile / Scrum'],
-    frontend:   ['React','Vue.js','TypeScript','HTML5','CSS3','Tailwind CSS','Next.js','Webpack','Jest','Figma'],
-    backend:    ['Node.js','Python','Java','REST APIs','GraphQL','PostgreSQL','MongoDB','Redis','Docker','AWS'],
-    data:       ['Python','Pandas','NumPy','TensorFlow','SQL','Tableau','Power BI','Machine Learning','R','Apache Spark'],
-    design:     ['Figma','Adobe XD','Photoshop','Illustrator','InDesign','UI/UX','Wireframing','Prototyping','Sketch'],
-    marketing:  ['SEO','Google Analytics','Content Strategy','Social Media','HubSpot','Email Marketing','A/B Testing','CRM'],
-    civil:      ['Structural Analysis','AutoCAD 2D/3D','Revit Architecture','Civil 3D','BIM','Estimation & Costing','Surveying','Geotechnical Engineering','STAAD.Pro','Project Management','Safe Software','Construction Supervision','Roads & Bridges','Reinforced Concrete (RCC)']
-};
-
-function aiSuggestSkills() {
-    const query = document.getElementById('ai-skills-input').value.toLowerCase();
-    let pool = AI_SKILLS.default;
-    if (query.includes('front') || query.includes('react') || query.includes('ui')) pool = [...AI_SKILLS.frontend, ...AI_SKILLS.default];
-    else if (query.includes('back') || query.includes('server') || query.includes('api')) pool = [...AI_SKILLS.backend, ...AI_SKILLS.default];
-    else if (query.includes('data') || query.includes('ml') || query.includes('ai')) pool = [...AI_SKILLS.data, ...AI_SKILLS.default];
-    else if (query.includes('design') || query.includes('ux')) pool = [...AI_SKILLS.design, ...AI_SKILLS.default];
-    else if (query.includes('market')) pool = [...AI_SKILLS.marketing, ...AI_SKILLS.default];
-    else if (query.includes('civil') || query.includes('struc')) pool = [...AI_SKILLS.civil, ...AI_SKILLS.default];
-
-    const container = document.getElementById('ai-skill-chips');
-    container.innerHTML = '';
-    pool.slice(0, 14).forEach(skill => {
-        const chip = document.createElement('span');
-        chip.className = 'ai-skill-chip';
-        chip.textContent = '+ ' + skill;
-        chip.addEventListener('click', () => {
-            const current = document.getElementById('input-skills').value;
-            const skills = current ? current + ', ' + skill : skill;
-            document.getElementById('input-skills').value = skills;
-            resumeData.skills = skills;
-            chip.remove();
-            updatePreview();
-        });
-        container.appendChild(chip);
-    });
-}
-
-function aiEnhanceCustomEntry(btn) {
-    const entry = btn.closest('.custom-entry');
-    const title = entry.querySelector('.ce-title').value || 'item';
-    
-    document.getElementById('ai-modal').style.display = 'flex';
-    const body = document.getElementById('ai-modal-body');
-    body.innerHTML = '<p>✨ Generating detail bullets for <strong>' + title + '</strong>...</p><div class="ai-loader"><div></div><div></div><div></div></div>';
-
-    setTimeout(() => {
-        const lines = [
-            `• Successfully completed comprehensive training and application in ${title}.`,
-            `• Demonstrated advanced proficiency and practical application of core concepts.`,
-            `• Recognized for outstanding attention to detail and problem-solving capabilities in ${title}.`,
-            `• Maintained compliance with all project specifications and standards relevant to ${title}.`,
-            `• Optimized workflows and improved team efficiency through advanced knowledge of ${title}.`
-        ];
+        setTimeout(() => {
+        const expRaw = expMatch || "";
+        const eduRaw = eduMatch || "";
         
-        body.innerHTML = `
-            <p><strong>Suggestions for ${title}:</strong></p>
-            <div style="display:flex; flex-direction:column; gap:0.5rem; margin-top:1rem">
-                ${lines.map(str => `
-                <div class="ai-suggestion-chip" onclick="applyAICustomLine('${escapeHTML(str)}')">
-                    ${str}
-                </div>
-                `).join('')}
-            </div>
-            <p style="font-size:0.8rem;color:var(--text-dim);margin-top:1rem">Click a suggestion to copy it to your clipboard!</p>
-        `;
-    }, 1200);
-}
-
-function applyAICustomLine(text) {
-    const modal = document.getElementById('ai-modal');
-    modal.style.display = 'none';
-    
-    const unescaped = unescapeHTML(text);
-    if(navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(unescaped).then(() => {
-            alert('✨ Copied to clipboard! Paste it into your custom line or description.');
+        const expEntries = splitEntries(expRaw).map(e => {
+            const lines = e.trim().split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            return parseExperienceEntry(lines);
         });
-    } else {
-        prompt('Copy this text manually:', unescaped);
-    }
-}
 
-function escapeHTML(str) {
-    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,'&#39;').replace(/"/g,'&quot;');
-}
-function unescapeHTML(str) {
-    const txt = document.createElement("textarea");
-    txt.innerHTML = str;
-    return txt.value;
-}
+        const eduEntries = splitEntries(eduRaw).map(e => {
+            const lines = e.trim().split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            return parseEducationEntry(lines);
+        });
 
-function aiEnhanceExperience(btn) {
-
-    const item = btn.closest('.list-item');
-    const desc = item.querySelector('.item-desc');
-    const pos  = item.querySelector('.item-position')?.value || 'Professional';
-    const co   = item.querySelector('.item-company')?.value  || 'Company';
-    const templates = [
-        `• Led cross-functional initiatives at ${co} as ${pos}, delivering measurable improvements in team efficiency.\n• Collaborated with stakeholders to define requirements and implemented scalable solutions ahead of deadline.\n• Mentored junior team members and established best practices that reduced onboarding time by 30%.`,
-        `• Managed high-value civil engineering projects at ${co} as ${pos}, ensuring compliance with structural standards and safety codes.\n• Oversaw site operations and coordinated with subcontractors to maintain project timelines and budget.\n• Optimized structural layouts using AutoCAD, resulting in a 15% reduction in material costs.`,
-        `• Designed and analyzed complex structural systems as ${pos} for ${co}, utilizing STAAD.Pro and Revit for high-precision modeling.\n• Conducted comprehensive site inspections and prepared detailed technical reports for regulatory approval.\n• Improved project workflow by implementing BIM (Building Information Modeling) standards.`
-    ];
-    desc.value = templates[Math.floor(Math.random() * templates.length)];
-    updatePreview();
-}
-
-function aiEnhanceProject(btn) {
-    const item = btn.closest('.list-item');
-    const desc = item.querySelector('.item-project-desc');
-    const name = item.querySelector('.item-project-name')?.value || 'Project';
-    desc.value = `• Built ${name} from the ground up using modern technologies, focusing on performance and scalability.\n• Implemented RESTful APIs and optimized database queries, reducing load times by 50%.\n• Deployed on cloud infrastructure with CI/CD pipelines ensuring 99.9% uptime.`;
-    updatePreview();
-}
-
-// ═════════════════════════════════════════════════════
-//  LOCAL PROFILES
-// ═════════════════════════════════════════════════════
-function saveCurrentProfile() {
-    const name = prompt("Enter a name for this profile:", resumeData.personal.name || "My Resume");
-    if (!name) return;
-
-    const snapshot = {
-        id: 'prof-' + Date.now(),
-        profileName: name,
-        data: {
-            ...resumeData,
-            experience: getDynamicItems('experience'),
-            education:  getDynamicItems('education'),
-            projects:   getDynamicItems('projects'),
-            customSections: getCustomSections()
-        }
-    };
-
-    let profiles = JSON.parse(localStorage.getItem('resume_profiles') || '[]');
-    profiles.push(snapshot);
-    localStorage.setItem('resume_profiles', JSON.stringify(profiles));
-    loadProfileList();
-    alert('✅ Profile saved to local storage!');
-}
-
-function loadProfileList() {
-    const container = document.getElementById('profiles-list');
-    if (!container) return;
-    const profiles = JSON.parse(localStorage.getItem('resume_profiles') || '[]');
-    
-    if (profiles.length === 0) {
-        container.innerHTML = '<p style="text-align:center;color:var(--text-dim);padding:2rem">No profiles saved yet.</p>';
-        return;
-    }
-
-    container.innerHTML = profiles.map(p => `
-        <div class="list-item" style="display:flex; justify-content:space-between; align-items:center; padding:1rem">
-            <div>
-                <strong style="display:block; font-size:1.1rem">${p.profileName}</strong>
-                <small style="color:var(--text-dim)">Last saved: ${new Date(parseInt(p.id.split('-')[1])).toLocaleDateString()}</small>
-            </div>
-            <div style="display:flex; gap:0.5rem">
-                <button class="btn btn-secondary" style="padding:0.4rem 0.8rem" onclick="applyProfile('${p.id}')">Load</button>
-                <button class="btn-remove" style="color:#ef4444; font-size:1.2rem" onclick="deleteProfile('${p.id}')">×</button>
-            </div>
-        </div>
-    `).join('');
-}
-
-function applyProfile(id) {
-    const profiles = JSON.parse(localStorage.getItem('resume_profiles') || '[]');
-    const profile = profiles.find(p => p.id === id);
-    if (profile && confirm(`Switch to "${profile.profileName}"? Current unsaved changes will be lost.`)) {
-        mergeResumeData(profile.data);
-    }
-}
-
-function deleteProfile(id) {
-    if (!confirm('Are you sure you want to delete this profile?')) return;
-    let profiles = JSON.parse(localStorage.getItem('resume_profiles') || '[]');
-    profiles = profiles.filter(p => p.id !== id);
-    localStorage.setItem('resume_profiles', JSON.stringify(profiles));
-    loadProfileList();
-}
-
-// ═════════════════════════════════════════════════════
-//  TEXT PARSER / IMPORT (Better LinkedIn/PDF support)
-// ═════════════════════════════════════════════════════
-function triggerLinkedInAutofill() {
-    const text = document.getElementById('import-text-input').value.trim();
-    const status = document.getElementById('linkedin-status');
-    if (!text) { status.textContent = 'Please paste some profile text first.'; status.className = 'linkedin-status error'; return; }
-
-    status.textContent = '🔍 AI Parsing... (Heuristic Engine v2)';
-    status.className = 'linkedin-status';
-
-    // Advanced Regex & Pattern Matching
-    const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-    const phoneMatch = text.match(/(\+?\d{1,4}?[-.\s]?\(?\d{1,3}?\)?[-.\s]?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{1,9})/);
-    const linkedinMatch = text.match(/linkedin\.com\/in\/([a-zA-Z0-9-]+)/i);
-    const websiteMatch = text.match(/(https?:\/\/)?(www\.)?([a-zA-Z0-9-]+\.[a-zA-Z]{2,})(\/[a-zA-Z0-9-._~:/?#[\]@!$&'()*+,;=]*)?/i);
-
-    // Name Extraction (Look for first line that isn't a common LinkedIn keyword)
-    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-    let nameCandidate = lines[0];
-    const noiseWords = ['linkedin', 'profile', 'contact', 'about', 'experience', 'education', 'skills'];
-    for(let l of lines) {
-        if (!noiseWords.some(w => l.toLowerCase().includes(w)) && l.length > 2 && l.length < 50) {
-            nameCandidate = l;
-            break;
-        }
-    }
-
-    // Title Extraction (often the line after the name)
-    let titleCandidate = lines[1] || '';
-    if (titleCandidate.toLowerCase().includes('@') || titleCandidate.match(/\d/)) titleCandidate = '';
-
-    // Summary Extraction (Look for "About" or "Summary" block)
-    let summaryMatch = "";
-    const lowerText = text.toLowerCase();
-    const summaryKeywords = ['about', 'summary', 'profile', 'professional summary'];
-    for (let kw of summaryKeywords) {
-        let idx = lowerText.indexOf(kw);
-        if (idx !== -1) {
-            summaryMatch = text.slice(idx + kw.length, idx + 600).trim();
-            break;
-        }
-    }
-    if (!summaryMatch) summaryMatch = text.slice(0, 400); // Fallback
-
-    // Advanced Section Block Extraction for Skills, Experience, Education
-    let skillsMatch = '';
-    let expMatch = '';
-    let eduMatch = '';
-    
-    // Generic block extractor
-    const extractSection = (keywords, nextKeywords) => {
-        const kStr = keywords.join('|');
-        const nextKStr = nextKeywords.join('|');
-        const regex = new RegExp(`(?:\\n|^)(?:${kStr})[\\s:-]*\\n([\\s\\S]*?)(?=\\n(?:${nextKStr})[\\s:-]*\\n|$)`, 'i');
-        const m = text.match(regex);
-        if (m) return m[1].trim();
-        // Fallback: search for keyword and take everything until next keyword
-        const lowerText = text.toLowerCase();
-        for (const kw of keywords) {
-            const idx = lowerText.indexOf(kw.toLowerCase());
-            if (idx !== -1) {
-                let endIdx = text.length;
-                for (const nkw of nextKeywords) {
-                    const nIdx = lowerText.indexOf(nkw.toLowerCase(), idx + kw.length);
-                    if (nIdx !== -1 && nIdx < endIdx) endIdx = nIdx;
-                }
-                return text.slice(idx + kw.length, endIdx).trim();
-            }
-        }
-        return '';
-    };
-
-    const sectionNames = ['Education', 'Experience', 'Skills', 'Projects', 'Certifications', 'Languages', 'Work Experience', 'Employment', 'Academic'];
-    skillsMatch = extractSection(['Skills', 'Core Competencies', 'Technical Skills'], sectionNames);
-    expMatch = extractSection(['Experience', 'Work Experience', 'Employment History'], sectionNames);
-    eduMatch = extractSection(['Education', 'Academic Background', 'Academic History'], sectionNames);
-
-    if (skillsMatch) {
-         skillsMatch = skillsMatch.replace(/\n/g, ', ').replace(/, \s*,/g, ',').trim();
-    }
-
-
-    setTimeout(() => {
         linkedInPending = {
             name:     nameCandidate,
             title:    titleCandidate || 'Professional',
-            location: text.match(/(?:New York|San Francisco|London|Mumbai|Remote|CA|NY|TX|Dubai|Singapore|Berlin|USA|India|UK|UAE)/i)?.[0] || '',
+            location: text.match(/(?:[A-Z][a-z]+(?: [A-Z][a-z]+)*, [A-Z]{2})|(?:New York|San Francisco|London|Mumbai|Remote|CA|NY|TX|Dubai|Singapore|Berlin|USA|India|UK|UAE|Paris|Tokyo|Toronto)/i)?.[0] || '',
             email:    emailMatch?.[0] || '',
             phone:    phoneMatch?.[1] || '',
             linkedin: linkedinMatch ? linkedinMatch[0] : '',
             website:  websiteMatch ? websiteMatch[0] : '',
-            summary:  (summaryMatch || "").replace(/\n\s*\n/g, '\n').slice(0, 500),
+            summary:  (summaryMatch || "").replace(/\n\s*\n/g, '\n').slice(0, 800),
             skills:   skillsMatch || "",
-            experience_raw: expMatch || "",
-            education_raw: eduMatch || ""
+            experience_entries: expEntries,
+            education_entries: eduEntries
         };
         showLinkedInModal();
         status.textContent = '✓ Analysis complete. Please review the changes in the popup.';
@@ -1207,61 +433,116 @@ function triggerLinkedInAutofill() {
 }
 
 function showLinkedInModal() {
-    const modal = document.getElementById('linkedin-modal');
-    const body  = document.getElementById('linkedin-modal-body');
-    const fields = ['name','title','location','email','linkedin','summary', 'skills', 'experience_raw', 'education_raw'];
-    const labels = { name:'Full Name', title:'Job Title', location:'Location', email:'Email', linkedin:'LinkedIn URL', summary:'Summary', skills:'Skills', experience_raw:'Work Experience', education_raw:'Education' };
+    const modal = document.getElementById("linkedin-modal");
+    const body  = document.getElementById("linkedin-modal-body");
+    const personalFields = ["name","title","location","email","linkedin","summary", "skills"];
+    const labels = { name:"Full Name", title:"Job Title", location:"Location", email:"Email", linkedin:"LinkedIn URL", summary:"Summary", skills:"Skills" };
 
-    let sectionsHTML = fields.map(f => {
-        let cur = '';
-        if (f === 'summary') cur = resumeData.summary || '';
-        else if (f === 'skills') cur = resumeData.skills || '';
-        else if (f === 'experience_raw') cur = resumeData.experience.length ? '(Existing work entries)' : '';
-        else if (f === 'education_raw') cur = resumeData.education.length ? '(Existing education entries)' : '';
-        else cur = resumeData.personal[f] || '';
+    let html = `
+        <div class="compare-intro">
+            <p>📋 <b>Granular Comparison</b>: Review and edit individual entries below. Check the boxes to apply specific details.</p>
+        </div>
+        <div class="compare-list">`;
 
-        let nw  = linkedInPending[f] || '';
+    // 1. Personal & Text Fields
+    personalFields.forEach(f => {
+        let cur = (f === "summary" || f === "skills") ? (resumeData[f] || "") : (resumeData.personal[f] || "");
+        let nw = linkedInPending[f] || "";
+        if (!nw && !cur) return;
+        
         const changed = nw && nw !== cur;
-        if (!cur && !nw) return '';
-
-        const clearBtn = cur
-            ? `<button onclick="clearResumeSection('${f}')" style="background:rgba(255,68,68,0.12);border:1px solid rgba(255,68,68,0.3);color:#f87171;border-radius:0.3rem;padding:2px 8px;font-size:0.7rem;cursor:pointer;font-family:inherit;">&#128465; Clear Current</button>`
-            : '';
-
-        const curSafe = cur ? cur.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>') : '<span class="empty-val">Empty</span>';
-        const nwSafe  = nw  ? nw .replace(/</g,'&lt;').replace(/>/g,'&gt;') : '';
-
-        return `
-        <div class="compare-section ${changed ? 'changed' : ''}">
+        html += `
+        <div class="compare-section ${changed ? "changed" : ""}">
             <div class="compare-header">
-                <label style="display:flex;align-items:center;gap:0.65rem;cursor:pointer">
-                    <input type="checkbox" class="compare-check" data-field="${f}" ${nw ? 'checked' : ''} style="accent-color:#10b981;width:1.15rem;height:1.15rem;">
+                <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer">
+                    <input type="checkbox" class="compare-check" data-field="${f}" ${nw ? "checked" : ""}>
                     <span class="compare-label">${labels[f]}</span>
                 </label>
-                <div style="display:flex;gap:0.4rem;align-items:center">
-                    ${changed ? '<span class="compare-badge">Modified</span>' : ''}
-                    ${clearBtn}
-                </div>
             </div>
             <div class="compare-grid">
                 <div class="compare-col current">
-                    <div class="col-label">Current in Resume</div>
-                    <div class="col-content" id="cur-${f}">${curSafe}</div>
+                    <div class="col-label">Current</div>
+                    <div class="col-content">${cur || "<small>Empty</small>"}</div>
                 </div>
                 <div class="compare-col new">
-                    <div class="col-label">Extracted — Click to edit</div>
-                    <textarea class="compare-edit-input" data-field="${f}" id="edit-${f}">${nwSafe}</textarea>
+                    <div class="col-label">Extracted (Editable)</div>
+                    <textarea class="compare-edit-input" data-field="${f}">${nw}</textarea>
                 </div>
             </div>
         </div>`;
-    }).join('');
+    });
 
-    body.innerHTML = `
-        <div class="compare-intro">
-            <p>&#9745; Check a field to include it &nbsp;|&nbsp; &#9998; Click the right panel to edit &nbsp;|&nbsp; Use <strong style="color:var(--text-main)">Clear Current</strong> to wipe existing data first.</p>
-        </div>
-        <div class="compare-list">${sectionsHTML}</div>`;
-    modal.style.display = 'flex';
+    // 2. Experience Entries
+    if (linkedInPending.experience_entries && linkedInPending.experience_entries.length > 0) {
+        html += `<div class="compare-group-title">Work Experience Entries</div>`;
+        linkedInPending.experience_entries.forEach((ent, idx) => {
+            html += `
+            <div class="compare-entry-card changed">
+                <div class="compare-header">
+                    <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer">
+                        <input type="checkbox" class="entry-check-exp" checked data-idx="${idx}">
+                        <b>Entry ${idx + 1}: ${ent.company}</b>
+                    </label>
+                </div>
+                <div class="entry-edit-grid">
+                    <div class="input-group">
+                        <label>Company</label>
+                        <input type="text" class="entry-val-company" value="${ent.company}">
+                    </div>
+                    <div class="input-group">
+                        <label>Title</label>
+                        <input type="text" class="entry-val-title" value="${ent.position}">
+                    </div>
+                    <div class="input-group">
+                        <label>Duration</label>
+                        <input type="text" class="entry-val-date" value="${ent.date}">
+                    </div>
+                    <div class="input-group" style="grid-column: span 2">
+                        <label>Description</label>
+                        <textarea class="entry-val-desc" rows="3">${ent.desc}</textarea>
+                    </div>
+                </div>
+            </div>`;
+        });
+    }
+
+    // 3. Education Entries
+    if (linkedInPending.education_entries && linkedInPending.education_entries.length > 0) {
+        html += `<div class="compare-group-title">Education Entries</div>`;
+        linkedInPending.education_entries.forEach((ent, idx) => {
+            html += `
+            <div class="compare-entry-card changed">
+                <div class="compare-header">
+                    <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer">
+                        <input type="checkbox" class="entry-check-edu" checked data-idx="${idx}">
+                        <b>Entry ${idx + 1}: ${ent.school}</b>
+                    </label>
+                </div>
+                <div class="entry-edit-grid">
+                    <div class="input-group">
+                        <label>School</label>
+                        <input type="text" class="entry-val-school" value="${ent.school}">
+                    </div>
+                    <div class="input-group">
+                        <label>Degree</label>
+                        <input type="text" class="entry-val-degree" value="${ent.degree}">
+                    </div>
+                    <div class="input-group">
+                        <label>Year</label>
+                        <input type="text" class="entry-val-date" value="${ent.date}">
+                    </div>
+                    <div class="input-group" style="grid-column: span 2">
+                        <label>Details</label>
+                        <textarea class="entry-val-desc" rows="2">${ent.desc}</textarea>
+                    </div>
+                </div>
+            </div>`;
+        });
+    }
+
+    html += `</div>`;
+    body.innerHTML = html;
+    modal.style.display = "flex";
 }
 
 function toggleAllCompareChecks(state) {
@@ -1311,21 +592,35 @@ function applyLinkedInData() {
         } else if (k === 'experience_raw') {
             resumeData.experience = [];
             document.getElementById('experience-list').innerHTML = '';
-            const newItem = addItem('experience');
-            if(newItem) {
-                newItem.querySelector('.item-company').value = "Imported Parsed Block";
-                newItem.querySelector('.item-position').value = "Work History Summary";
-                newItem.querySelector('.item-desc').value = val;
-            }
+            
+            const entries = splitEntries(val);
+            entries.forEach(e => {
+                const newItem = addItem('experience');
+                if (newItem) {
+                    const lines = e.trim().split('\n').map(l => l.trim()).filter(l => l.length > 0);
+                    const parsed = parseExperienceEntry(lines);
+                    newItem.querySelector('.item-company').value = parsed.company;
+                    newItem.querySelector('.item-position').value = parsed.position;
+                    newItem.querySelector('.item-duration').value = parsed.date;
+                    newItem.querySelector('.item-desc').value = parsed.desc;
+                }
+            });
         } else if (k === 'education_raw') {
             resumeData.education = [];
             document.getElementById('education-list').innerHTML = '';
-            const newItem = addItem('education');
-            if(newItem) {
-                newItem.querySelector('.item-school').value = "Imported Parsed Block";
-                newItem.querySelector('.item-degree').value = "Education Summary";
-                newItem.querySelector('.item-desc').value = val;
-            }
+            
+            const entries = splitEntries(val);
+            entries.forEach(e => {
+                const newItem = addItem('education');
+                if (newItem) {
+                    const lines = e.trim().split('\n').map(l => l.trim()).filter(l => l.length > 0);
+                    const parsed = parseEducationEntry(lines);
+                    newItem.querySelector('.item-school').value = parsed.school;
+                    newItem.querySelector('.item-degree').value = parsed.degree;
+                    newItem.querySelector('.item-year').value = parsed.date;
+                    newItem.querySelector('.item-desc').value = parsed.desc;
+                }
+            });
         } else if (resumeData.personal.hasOwnProperty(k)) {
             resumeData.personal[k] = val;
             const el = document.getElementById('input-' + k);
@@ -1335,6 +630,208 @@ function applyLinkedInData() {
 
     closeLinkedInModal();
     updatePreview();
+}
+
+function parseExperienceEntry(lines) {
+    const result = { company: '', position: '', date: '', desc: '' };
+    if (lines.length === 0) return result;
+
+    const titleKeywords = ['engineer', 'manager', 'developer', 'analyst', 'lead', 'specialist', 'officer', 'architect', 'consultant', 'intern', 'trainee'];
+    const dateRegex = /(?:19|20)\d{2}|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Present|Current/i;
+
+    // First 2 lines are usually Company/Title/Date
+    for (let i = 0; i < Math.min(lines.length, 3); i++) {
+        const line = lines[i];
+        if (dateRegex.test(line) && !result.date) {
+            result.date = line;
+        } else if (titleKeywords.some(k => line.toLowerCase().includes(k)) && !result.position) {
+            result.position = line;
+        } else if (!result.company) {
+            result.company = line;
+        } else if (!result.position) {
+            result.position = line;
+        }
+    }
+
+    // Remaining lines are description
+    result.desc = lines.filter(l => l !== result.company && l !== result.position && l !== result.date).join('\n');
+    
+    // Clean up empty fields
+    if (!result.company) result.company = 'Company Name';
+    if (!result.position) result.position = 'Professional Role';
+    
+    return result;
+}
+
+function parseEducationEntry(lines) {
+    const result = { school: '', degree: '', date: '', desc: '' };
+    if (lines.length === 0) return result;
+
+
+function insertBullet(btn) {
+    const textarea = btn.closest(".input-group").querySelector("textarea");
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const bullet = "• ";
+    textarea.value = text.slice(0, start) + bullet + text.slice(start);
+    textarea.focus();
+    textarea.selectionStart = textarea.selectionEnd = start + bullet.length;
+    updatePreview();
+}
+
+function splitEntries(text) {
+    if (!text) return [];
+    const blocks = text.split(/\n\s*\n/);
+    if (blocks.length > 1) {
+        return blocks.filter(b => b.trim().length > 15);
+    }
+    const lines = text.split("\n");
+    let entries = [];
+    let current = [];
+    lines.forEach(l => {
+        const hasDate = /(?:19|20)\d{2}|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Present|Current/i.test(l);
+        if (hasDate && current.length > 1 && l.length < 60) {
+            entries.push(current.join("\n"));
+            current = [l];
+        } else {
+            current.push(l);
+        }
+    });
+    if (current.length > 0) entries.push(current.join("\n"));
+    return entries.filter(e => e.trim().length > 10);
+}
+
+
+
+function splitEntries(text) {
+    if (!text) return [];
+    const blocks = text.split(/\n\s*\n/);
+    if (blocks.length > 1) {
+        return blocks.filter(b => b.trim().length > 15);
+    }
+    const lines = text.split("\n");
+    let entries = [];
+    let current = [];
+    lines.forEach(l => {
+        const hasDate = /(?:19|20)\d{2}|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Present|Current/i.test(l);
+        if (hasDate && current.length > 1 && l.length < 60) {
+            entries.push(current.join("\n"));
+            current = [l];
+        } else {
+            current.push(l);
+        }
+    });
+    if (current.length > 0) entries.push(current.join("\n"));
+    return entries.filter(e => e.trim().length > 10);
+}
+    const eduKeywords = ['university', 'college', 'school', 'institute', 'academy', 'polytechnic'];
+    const degreeKeywords = ['bachelor', 'master', 'phd', 'diploma', 'degree', 'license', 'bs', 'ms', 'ba', 'ma', 'b.sc', 'm.sc'];
+    const dateRegex = /(?:19|20)\d{2}|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Present|Current/i;
+
+    for (let i = 0; i < Math.min(lines.length, 3); i++) {
+        const line = lines[i];
+        if (dateRegex.test(line) && !result.date) {
+            result.date = line.match(/(?:19|20)\d{2}/)?.[0] || line;
+        } else if (eduKeywords.some(k => line.toLowerCase().includes(k)) && !result.school) {
+            result.school = line;
+        } else if (degreeKeywords.some(k => line.toLowerCase().includes(k)) && !result.degree) {
+            result.degree = line;
+        } else if (!result.school) {
+            result.school = line;
+        } else if (!result.degree) {
+            result.degree = line;
+        }
+    }
+    result.desc = lines.filter(l => l !== result.school && l !== result.degree && l !== result.date).join('\n');
+    
+    if (!result.school) result.school = 'Educational Institution';
+    if (!result.degree) result.degree = 'Field of Study';
+
+    return result;
+}
+
+// ═════════════════════════════════════════════════════
+//  SECTION CLEARING
+// ═════════════════════════════════════════════════════
+function clearPersonalData() {
+    if (!confirm('Clear all personal details?')) return;
+    pushToHistory();
+    Object.keys(resumeData.personal).forEach(k => resumeData.personal[k] = '');
+    ['name','email','phone','location','title','linkedin','github','website','twitter'].forEach(k => {
+        const el = document.getElementById('input-' + k);
+        if (el) el.value = '';
+    });
+    updatePreview();
+}
+
+function clearSummaryData() {
+    pushToHistory();
+    resumeData.summary = '';
+    const el = document.getElementById('input-summary');
+    if (el) el.value = '';
+    updatePreview();
+}
+
+function clearExperienceData() {
+    if (!confirm('Remove all work experience entries?')) return;
+    pushToHistory();
+    resumeData.experience = [];
+    document.getElementById('experience-list').innerHTML = '';
+    updatePreview();
+}
+
+function clearEducationData() {
+    if (!confirm('Remove all education entries?')) return;
+    pushToHistory();
+    resumeData.education = [];
+    document.getElementById('education-list').innerHTML = '';
+    updatePreview();
+}
+
+function clearSkillsData() {
+    pushToHistory();
+    resumeData.skills = '';
+    const el = document.getElementById('input-skills');
+    if (el) el.value = '';
+    updatePreview();
+}
+
+function clearProjectsData() {
+    if (!confirm('Remove all projects?')) return;
+    pushToHistory();
+    resumeData.projects = [];
+    document.getElementById('projects-list').innerHTML = '';
+    updatePreview();
+}
+
+function splitEntries(text) {
+    if (!text) return [];
+    
+    // Split by common separators: large blocks of whitespace or date-looking markers
+    const blocks = text.split(/\n\s*\n/);
+    if (blocks.length > 1) {
+        return blocks.filter(b => b.trim().length > 15);
+    }
+    
+    // If no blocks, try splitting by bullet points or common keywords 
+    const lines = text.split('\n');
+    let entries = [];
+    let current = [];
+    
+    lines.forEach(l => {
+        const hasDate = /(?:19|20)\d{2}|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Present|Current/i.test(l);
+        if (hasDate && current.length > 1 && l.length < 60) {
+            entries.push(current.join('\n'));
+            current = [l];
+        } else {
+            current.push(l);
+        }
+    });
+    if (current.length > 0) entries.push(current.join('\n'));
+    
+    return entries.filter(e => e.trim().length > 10);
 }
 
 function closeLinkedInModal() { document.getElementById('linkedin-modal').style.display = 'none'; }
@@ -1648,19 +1145,53 @@ async function extractTextFromPDF(file) {
             const page = await pdf.getPage(i);
             const textContent = await page.getTextContent();
             
-            // Smarter spacing: group by vertical position
-            let lastY, pageText = '';
-            for (const item of textContent.items) {
-                const currentY = item.transform[5];
-                if (lastY !== undefined && Math.abs(lastY - currentY) > 2) {
-                    pageText += '\n';
-                } else if (lastY !== undefined) {
-                    // Check if there's enough horizontal distance for a space
-                    pageText += ' ';
+            // Improved PDF extraction for columns
+            let items = textContent.items.map(item => ({
+                str: item.str,
+                x: item.transform[4],
+                y: item.transform[5],
+                width: item.width,
+                height: item.height
+            }));
+
+            if (items.length === 0) continue;
+
+            // Sort items primarily by Y (top to bottom), secondarily by X (left to right)
+            // Note: PDF coordinates usually have Y increasing from bottom to top
+            items.sort((a, b) => b.y - a.y || a.x - b.x);
+
+            let pageLines = [];
+            let currentLine = [];
+            let lastY = items[0].y;
+
+            items.forEach(item => {
+                if (Math.abs(item.y - lastY) > 5) { // Threshold for new line
+                    pageLines.push(currentLine);
+                    currentLine = [];
+                    lastY = item.y;
                 }
-                pageText += item.str;
-                lastY = currentY;
-            }
+                currentLine.push(item);
+            });
+            pageLines.push(currentLine);
+
+            // For each line, check if there's a big horizontal gap indicative of columns
+            let pageText = '';
+            pageLines.forEach(line => {
+                line.sort((a, b) => a.x - b.x);
+                let lineText = '';
+                let lastX = -1;
+                line.forEach(item => {
+                    // Logic for spacing: if gap is huge, columns. If gap is small, merge. If gap is tiny, no space.
+                    if (lastX !== -1) {
+                        const gap = item.x - lastX;
+                        if (gap > 40) lineText += '    '; 
+                        else if (gap > 1.5) lineText += ' ';
+                    }
+                    lineText += item.str;
+                    lastX = item.x + item.width;
+                });
+                pageText += lineText + '\n';
+            });
             fullText += pageText + '\n';
         }
         
@@ -1846,4 +1377,61 @@ function renameProfile(id, currentName) {
         localStorage.setItem('resumeProfiles', JSON.stringify(profiles));
         loadProfileList();
     }
+}
+// ═════════════════════════════════════════════════════
+//  STRENGTH METER
+// ═════════════════════════════════════════════════════
+function updateStrengthMeter() {
+    const bar = document.getElementById('strength-bar-fill');
+    const percentTxt = document.getElementById('strength-percent');
+    const tipTxt = document.getElementById('strength-tip');
+    if (!bar) return;
+
+    let score = 0;
+    let tips = [];
+
+    // Personal Info (20 pts)
+    if (resumeData.personal.name) score += 5; else tips.push("Add your full name");
+    if (resumeData.personal.email) score += 5; else tips.push("Add contact email");
+    if (resumeData.personal.title) score += 5;
+    if (resumeData.personal.location) score += 5;
+
+    // Summary (15 pts)
+    if (resumeData.summary && resumeData.summary.length > 50) score += 15;
+    else tips.push("Write a short professional summary");
+
+    // Experience (30 pts)
+    const exp = getDynamicItems('experience');
+    if (exp.length > 0) {
+        score += 15;
+        if (exp.some(e => e.desc && e.desc.length > 40)) score += 15;
+        else tips.push("Add descriptions to your work roles");
+    } else tips.push("Add at least one work experience");
+
+    // Education (15 pts)
+    const edu = getDynamicItems('education');
+    if (edu.length > 0) score += 15;
+    else tips.push("Include your education details");
+
+    // Skills (10 pts)
+    if (resumeData.skills && resumeData.skills.split(',').length >= 3) score += 10;
+    else tips.push("List at least 3-5 core skills");
+
+    // Photo/Social (10 pts)
+    if (resumeData.photo) score += 5;
+    if (resumeData.personal.linkedin || resumeData.personal.github) score += 5;
+
+    score = Math.min(100, score);
+    bar.style.width = score + '%';
+    percentTxt.textContent = score + '%';
+
+    if (score < 30) tipTxt.textContent = "Getting started! " + (tips[0] || "");
+    else if (score < 70) tipTxt.textContent = "Looking good. " + (tips[0] || "");
+    else if (score < 100) tipTxt.textContent = "Almost there! " + (tips[0] || "");
+    else tipTxt.textContent = "Perfect! Your resume is highly competitive.";
+
+    // Smooth color transition for strength bar
+    if (score < 40) bar.style.background = '#f87171';
+    else if (score < 80) bar.style.background = '#fbbf24';
+    else bar.style.background = 'linear-gradient(to right, #818cf8, #f472b6)';
 }
